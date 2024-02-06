@@ -18,7 +18,8 @@ internal_forces::muscles::Characteristics::Characteristics() :
     m_torqueDeactivation(std::make_shared<utils::Scalar>(0.04)),
     m_fatigueParameters(std::make_shared<internal_forces::muscles::FatigueParameters>
                         (internal_forces::muscles::FatigueParameters())),
-    m_useDamping(std::make_shared<bool>(false))
+    m_useDamping(std::make_shared<bool>(false)),
+    m_ascale(std::make_shared<utils::Scalar>(0))    //fes
 {
 
 }
@@ -35,7 +36,8 @@ internal_forces::muscles::Characteristics::Characteristics(
     m_torqueActivation(other.m_torqueActivation),
     m_torqueDeactivation(other.m_torqueDeactivation),
     m_fatigueParameters(other.m_fatigueParameters),
-    m_useDamping(other.m_useDamping)
+    m_useDamping(other.m_useDamping),
+    m_ascale(other.m_ascale)        // fes
 {
 
 }
@@ -51,7 +53,8 @@ internal_forces::muscles::Characteristics::Characteristics(
     bool useDamping,
     const utils::Scalar& torqueAct,
     const utils::Scalar& torqueDeact,
-    const utils::Scalar& minAct):
+    const utils::Scalar& minAct,
+    const utils::Scalar& mAscale):
     m_optimalLength(std::make_shared<utils::Scalar>(optLength)),
     m_fIsoMax(std::make_shared<utils::Scalar>(fmax)),
     m_PCSA(std::make_shared<utils::Scalar>(PCSA)),
@@ -63,8 +66,8 @@ internal_forces::muscles::Characteristics::Characteristics(
     m_torqueDeactivation(std::make_shared<utils::Scalar>(torqueDeact)),
     m_fatigueParameters(std::make_shared<internal_forces::muscles::FatigueParameters>
                         (fatigueParameters)),
-    m_useDamping(std::make_shared<bool>(useDamping))
-
+    m_useDamping(std::make_shared<bool>(useDamping)),
+    m_ascale(std::make_shared<utils::Scalar>(mAscale))  //fes
 {
 
 }
@@ -96,7 +99,7 @@ void internal_forces::muscles::Characteristics::DeepCopy(
     *m_torqueDeactivation = *other.m_torqueDeactivation;
     *m_fatigueParameters = other.m_fatigueParameters->DeepCopy();
     *m_useDamping = *other.m_useDamping;
-
+    *m_ascale = *other.m_ascale;
 }
 
 // Get et Set
@@ -217,4 +220,14 @@ void internal_forces::muscles::Characteristics::setUseDamping(
 bool internal_forces::muscles::Characteristics::useDamping() const
 {
     return *m_useDamping;
+}
+
+void internal_forces::muscles::Characteristics::setMuscleAscale(
+        const utils::Scalar& val)
+{
+    *m_ascale = val;
+}
+const utils::Scalar& internal_forces::muscles::Characteristics::muscleAscale() const
+{
+    return *m_ascale;
 }

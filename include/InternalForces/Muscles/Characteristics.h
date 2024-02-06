@@ -45,6 +45,7 @@ public:
     /// \param torqueDeact Time deactivation constant (default: 0.04)
     /// \param minAct Minimal activation (default: 0.01)
     /// \param useDamping Use damping (default: false)
+    /// \param mAscale The ding model a scale parameter
     ///
     Characteristics(
         const utils::Scalar& optLength,
@@ -57,7 +58,8 @@ public:
         bool useDamping=false,
         const utils::Scalar& torqueAct = 0.01,
         const utils::Scalar& torqueDeact = 0.04,
-        const utils::Scalar& minAct = 0.01);
+        const utils::Scalar& minAct = 0.01,
+        const utils::Scalar& mAscale = 10);
 
     ///
     /// \brief Destroy the class properly
@@ -218,6 +220,12 @@ public:
     ///
     bool useDamping() const;
 
+    void setMuscleAscale(const utils::Scalar& val);
+    ///
+    /// \brief Return the ding model a scale parameter
+    /// \return The ding model a scale parameter
+    ///
+    const utils::Scalar& muscleAscale() const;
 
 protected:
     std::shared_ptr<utils::Scalar>
@@ -243,6 +251,9 @@ protected:
     // Fatigue parameters
     std::shared_ptr<FatigueParameters>
     m_fatigueParameters; ///< Fatigue parameters
+
+    //FES parameters
+    std::shared_ptr<utils::Scalar> m_ascale; ///< a_scale parameter in Ding's model (see 2007)
 };
 
 }
