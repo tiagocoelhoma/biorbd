@@ -19,7 +19,9 @@ internal_forces::muscles::Characteristics::Characteristics() :
     m_fatigueParameters(std::make_shared<internal_forces::muscles::FatigueParameters>
                         (internal_forces::muscles::FatigueParameters())),
     m_useDamping(std::make_shared<bool>(false)),
-    m_ascale(std::make_shared<utils::Scalar>(0))    //fes
+    m_ascale(std::make_shared<utils::Scalar>(0)),    //fes
+    m_dingTau2(std::make_shared<utils::Scalar>(0)),
+    m_dingKm(std::make_shared<utils::Scalar>(0))//fes
 {
 
 }
@@ -37,7 +39,9 @@ internal_forces::muscles::Characteristics::Characteristics(
     m_torqueDeactivation(other.m_torqueDeactivation),
     m_fatigueParameters(other.m_fatigueParameters),
     m_useDamping(other.m_useDamping),
-    m_ascale(other.m_ascale)        // fes
+    m_ascale(other.m_ascale),        // fes
+    m_dingTau2(other.m_dingTau2),
+    m_dingKm(other.m_dingKm)
 {
 
 }
@@ -54,7 +58,9 @@ internal_forces::muscles::Characteristics::Characteristics(
     const utils::Scalar& torqueAct,
     const utils::Scalar& torqueDeact,
     const utils::Scalar& minAct,
-    const utils::Scalar& mAscale):
+    const utils::Scalar& mAscale,
+    const utils::Scalar& mDingTau2Param,
+    const utils::Scalar& mDingKmParam):
     m_optimalLength(std::make_shared<utils::Scalar>(optLength)),
     m_fIsoMax(std::make_shared<utils::Scalar>(fmax)),
     m_PCSA(std::make_shared<utils::Scalar>(PCSA)),
@@ -67,7 +73,9 @@ internal_forces::muscles::Characteristics::Characteristics(
     m_fatigueParameters(std::make_shared<internal_forces::muscles::FatigueParameters>
                         (fatigueParameters)),
     m_useDamping(std::make_shared<bool>(useDamping)),
-    m_ascale(std::make_shared<utils::Scalar>(mAscale))  //fes
+    m_ascale(std::make_shared<utils::Scalar>(mAscale)),  //fes
+    m_dingTau2(std::make_shared<utils::Scalar>(mDingTau2Param)),
+    m_dingKm(std::make_shared<utils::Scalar>(mDingKmParam))
 {
 
 }
@@ -100,6 +108,8 @@ void internal_forces::muscles::Characteristics::DeepCopy(
     *m_fatigueParameters = other.m_fatigueParameters->DeepCopy();
     *m_useDamping = *other.m_useDamping;
     *m_ascale = *other.m_ascale;
+    *m_dingTau2 = *other.m_dingTau2;
+    *m_dingKm = *other.m_dingKm;
 }
 
 // Get et Set
@@ -230,4 +240,24 @@ void internal_forces::muscles::Characteristics::setMuscleAscale(
 const utils::Scalar& internal_forces::muscles::Characteristics::muscleAscale() const
 {
     return *m_ascale;
+}
+
+void internal_forces::muscles::Characteristics::setMuscleDingTau2Param(
+        const utils::Scalar& val)
+{
+    *m_dingTau2 = val;
+}
+const utils::Scalar& internal_forces::muscles::Characteristics::muscleDingTau2Param() const
+{
+    return *m_dingTau2;
+}
+
+void internal_forces::muscles::Characteristics::setMuscleDingKmParam(
+        const utils::Scalar& val)
+{
+    *m_dingKm = val;
+}
+const utils::Scalar& internal_forces::muscles::Characteristics::muscleDingKmParam() const
+{
+    return *m_dingKm;
 }
