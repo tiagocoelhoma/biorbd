@@ -903,6 +903,7 @@ void Reader::readModelFile(
                 double shapeFactor(0);
                 internal_forces::muscles::FatigueParameters fatigueParameters;
                 double mAscale(0);          // FES Ding
+                double mDingTau1Param(0);
                 double mDingTau2Param(0);
                 double mDingKmParam(0);
 
@@ -1000,6 +1001,8 @@ void Reader::readModelFile(
                         }
                     } else if (!property_tag.tolower().compare("a_scale")) {
                         file.read(mAscale, variable);             // FES Ding
+                    } else if (!property_tag.tolower().compare("ding_tau_1")) {
+                        file.read(mDingTau1Param, variable);             // FES Ding
                     } else if (!property_tag.tolower().compare("ding_tau_2")) {
                         file.read(mDingTau2Param, variable);             // FES Ding
                     } else if (!property_tag.tolower().compare("ding_km")) {
@@ -1017,7 +1020,7 @@ void Reader::readModelFile(
                 internal_forces::muscles::State stateMax(maxExcitation, maxActivation);
                 internal_forces::muscles::Characteristics characteristics(optimalLength, maxForce, PCSA,
                         tendonSlackLength, pennAngle, stateMax,
-                        fatigueParameters, useDamping, 0.01, 0.04, 0.01, mAscale, mDingTau2Param, mDingKmParam);
+                        fatigueParameters, useDamping, 0.01, 0.04, 0.01, mAscale, mDingTau1Param,  mDingTau2Param, mDingKmParam);
                 model->muscleGroup(static_cast<size_t>(idxGroup)).addMuscle(name,type,geo,
                         characteristics,
                         internal_forces::PathModifiers(),stateType,dynamicFatigueType);

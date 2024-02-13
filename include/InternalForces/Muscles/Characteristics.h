@@ -46,6 +46,7 @@ public:
     /// \param minAct Minimal activation (default: 0.01)
     /// \param useDamping Use damping (default: false)
     /// \param mAscale The ding model a scale parameter
+    /// \param dingTau1 The ding model a scale parameter
     /// \param dingTau2 The ding model a scale parameter
     /// \param dingKmParam The ding model Km parameter
     ///
@@ -62,6 +63,7 @@ public:
         const utils::Scalar& torqueDeact = 0.04,
         const utils::Scalar& minAct = 0.01,
         const utils::Scalar& mAscale = 10,
+        const utils::Scalar& mDingTau1Param = 0.001,
         const utils::Scalar& mDingTau2Param = 0.001,
         const utils::Scalar& mDingKmParam = 0.001);
 
@@ -231,6 +233,13 @@ public:
     ///
     const utils::Scalar& muscleAscale() const;
 
+    void setMuscleDingTau1Param(const utils::Scalar& val);
+    ///
+    /// \brief Return the ding model a scale parameter
+    /// \return The ding model a scale parameter
+    ///
+    const utils::Scalar& muscleDingTau1Param() const;
+
     void setMuscleDingTau2Param(const utils::Scalar& val);
     ///
     /// \brief Return the ding model a scale parameter
@@ -272,6 +281,7 @@ protected:
 
     //FES parameters
     std::shared_ptr<utils::Scalar> m_ascale; ///< a_scale parameter in Ding's model (see 2007)
+    std::shared_ptr<utils::Scalar> m_dingTau1; ///< tau_1 parameter in Ding's model (see 2007)
     std::shared_ptr<utils::Scalar> m_dingTau2; ///< tau_2 parameter in Ding's model (see 2007)
     std::shared_ptr<utils::Scalar> m_dingKm; ///< Km parameter in Ding's model (see 2007)
 };
