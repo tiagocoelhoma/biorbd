@@ -41,7 +41,7 @@ internal_forces::muscles::Characteristics::Characteristics(
     m_fatigueParameters(other.m_fatigueParameters),
     m_useDamping(other.m_useDamping),
     m_ascale(other.m_ascale),        // fes
-    m_dingTau1(other.m_dingTau2),
+    m_dingTau1(other.m_dingTau1),
     m_dingTau2(other.m_dingTau2),
     m_dingKm(other.m_dingKm)
 {
