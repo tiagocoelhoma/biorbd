@@ -53,7 +53,7 @@ public:
     /// \param parentName The name of the parent
     /// \param isTechnical If the node is technical
     /// \param isAnatomical If the node is anatomical
-    /// \param axesToRemove The axis to remove
+    /// \param axesToRemove The axes to remove
     /// \param parentID The index of the parent segment
     ///
     NodeSegment(
@@ -74,7 +74,7 @@ public:
     /// \param parentName The name of the parent
     /// \param isTechnical If the node is technical
     /// \param isAnatomical If the node is anatomical
-    /// \param axesToRemove The axis to remove
+    /// \param axesToRemove The axes to remove
     /// \param parentID The index of the parent segment
     ///
     NodeSegment(
@@ -84,25 +84,6 @@ public:
         bool isTechnical,
         bool isAnatomical,
         const utils::String& axesToRemove,
-        int parentID);
-
-    ///
-    /// \brief Construct a segment node
-    /// \param node The position of the node
-    /// \param name The name of the node
-    /// \param parentName The name of the parent
-    /// \param isTechnical If the node is technical
-    /// \param isAnatomical If the node is anatomical
-    /// \param axesToRemove The axis to remove
-    /// \param parentID The index of the parent segment
-    ///
-    NodeSegment(
-        const utils::Vector3d& node,
-        const utils::String& name,
-        const utils::String& parentName,
-        bool isTechnical,
-        bool isAnatomical,
-        const std::vector<bool>& axesToRemove,
         int parentID);
 
     ///
@@ -118,6 +99,12 @@ public:
     void DeepCopy(const NodeSegment& other);
 
     // Get and Set
+
+    /// 
+    /// \brief Set internal values of the node without changing other parameters
+    /// \param values The new values
+    /// 
+    void setValues(const NodeSegment& values);
 
     ///
     /// \brief Return if node is technical
@@ -210,6 +197,7 @@ public:
     ///
     int nbAxesToRemove() const;
 
+
 #ifndef SWIG
 #ifdef BIORBD_USE_EIGEN3_MATH
     ///
@@ -232,9 +220,9 @@ protected:
     ///
     void setType();
 
+    
     std::shared_ptr<std::vector<bool>> m_axesRemoved; ///< The axes to remove
-    std::shared_ptr<int>
-    m_nbAxesToRemove; ///< Removed one of multiple axes (1 axis : project on a plan, 2 axes : project on the 3rd axis, 3 axes : return the position of the parent reference)
+    std::shared_ptr<int> m_nbAxesToRemove; ///< Removed one of multiple axes (1 axis : project on a plan, 2 axes : project on the 3rd axis, 3 axes : return the position of the parent reference)
     std::shared_ptr<bool> m_technical; ///< If a marker is a technical marker
     std::shared_ptr<bool> m_anatomical; ///< It marker is a anatomical marker
     std::shared_ptr<int> m_id; ///< The parent identification

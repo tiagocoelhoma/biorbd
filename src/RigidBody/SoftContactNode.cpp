@@ -71,29 +71,28 @@ void rigidbody::SoftContactNode::DeepCopy(
 utils::SpatialVector rigidbody::SoftContactNode::computeForceAtOrigin(
         Joints &model,
         const GeneralizedCoordinates &Q,
-        const GeneralizedVelocity &QDot,
+        const GeneralizedVelocity &Qdot,
         bool updateKin)
 {
-
 #ifdef BIORBD_USE_CASADI_MATH
-    updateKin = true;
+    Joints
 #else
-    if (updateKin){
-        model.UpdateKinematicsCustom(&Q, &QDot);
-    }
-    updateKin = false;
+    Joints& 
 #endif
+    updatedModel = model.UpdateKinematicsCustom(updateKin? &Q: nullptr, updateKin? &Qdot: nullptr, nullptr);
+    updateKin = false;
 
-    unsigned int id = model.GetBodyId(parent().c_str());
-    utils::Vector3d x(RigidBodyDynamics::CalcBodyToBaseCoordinates(model, Q, id, *this, updateKin));
-    utils::Vector3d dx(rigidbody::NodeSegment(RigidBodyDynamics::CalcPointVelocity(model, Q, QDot, id, *this, updateKin)));
-    utils::Vector3d angularVelocity(RigidBodyDynamics::CalcPointVelocity6D(model, Q, QDot, id, utils::Vector3d(0, 0, 0), updateKin).block(0, 0, 3, 1));
+    unsigned int id = updatedModel.GetBodyId(parent().c_str());
+    utils::Vector3d dx(rigidbody::NodeSegment(updatedModel.CalcPointVelocity(Q, Qdot, id, *this, updateKin)));
+
+    utils::Vector3d x(updatedModel.CalcBodyToBaseCoordinates(Q, id, *this, updateKin));
+    utils::Vector3d angularVelocity(updatedModel.CalcPointVelocity6D(Q, Qdot, id, utils::Vector3d(0, 0, 0), updateKin).block(0, 0, 3, 1));
 
     utils::Vector3d force(computeForce(x, dx, angularVelocity));
 
     // Transport to CoM (Bour's formula)
-    const utils::Vector3d& CoM(model.segment(parent()).characteristics().CoM());
-    utils::Vector3d CoMinGlobal(RigidBodyDynamics::CalcBodyToBaseCoordinates(model, Q, id, CoM, updateKin));
+    const utils::Vector3d& CoM(updatedModel.segment(parent()).characteristics().CoM());
+    utils::Vector3d CoMinGlobal(updatedModel.CalcBodyToBaseCoordinates(Q, id, CoM, updateKin));
 
     // Find the application point of the force
     utils::SpatialVector out(0., 0., 0., 0., 0., 0.);

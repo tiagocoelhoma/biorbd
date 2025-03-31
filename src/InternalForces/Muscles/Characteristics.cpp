@@ -19,6 +19,7 @@ internal_forces::muscles::Characteristics::Characteristics() :
     m_fatigueParameters(std::make_shared<internal_forces::muscles::FatigueParameters>
                         (internal_forces::muscles::FatigueParameters())),
     m_useDamping(std::make_shared<bool>(false)),
+    m_maxShorteningSpeed(std::make_shared<utils::Scalar>(10.0)),
     m_ascale(std::make_shared<utils::Scalar>(0)),           //fes
     m_dingTau1(std::make_shared<utils::Scalar>(0)),         //fes
     m_dingTau2(std::make_shared<utils::Scalar>(0)),         //fes
@@ -40,6 +41,7 @@ internal_forces::muscles::Characteristics::Characteristics(
     m_torqueDeactivation(other.m_torqueDeactivation),
     m_fatigueParameters(other.m_fatigueParameters),
     m_useDamping(other.m_useDamping),
+    m_maxShorteningSpeed(other.m_maxShorteningSpeed),
     m_ascale(other.m_ascale),        // fes
     m_dingTau1(other.m_dingTau1),
     m_dingTau2(other.m_dingTau2),
@@ -57,9 +59,11 @@ internal_forces::muscles::Characteristics::Characteristics(
     const internal_forces::muscles::State &emgMax,
     const internal_forces::muscles::FatigueParameters &fatigueParameters,
     bool useDamping,
+    const utils::Scalar& maxShorteningSpeed,
     const utils::Scalar& torqueAct,
     const utils::Scalar& torqueDeact,
-    const utils::Scalar& minAct,
+    const utils::Scalar& minAct
+    ,
     const utils::Scalar& mAscale,
     const utils::Scalar& mDingTau1Param,
     const utils::Scalar& mDingTau2Param,
@@ -114,7 +118,8 @@ void internal_forces::muscles::Characteristics::DeepCopy(
     *m_ascale = *other.m_ascale;
     *m_dingTau1 = *other.m_dingTau1;
     *m_dingTau2 = *other.m_dingTau2;
-    *m_dingKm = *other.m_dingKm;
+    *m_dingKm = *other.m_dingKm;    *m_maxShorteningSpeed = *other.m_maxShorteningSpeed;
+
 }
 
 // Get et Set
@@ -181,6 +186,17 @@ const utils::Scalar& internal_forces::muscles::Characteristics::minActivation()
 const
 {
     return *m_minActivation;
+}
+
+void internal_forces::muscles::Characteristics::setMaxShorteningSpeed(
+    const utils::Scalar& val)
+{
+    *m_maxShorteningSpeed = val;
+}
+
+const utils::Scalar& internal_forces::muscles::Characteristics::maxShorteningSpeed() const
+{
+    return *m_maxShorteningSpeed;
 }
 
 void internal_forces::muscles::Characteristics::setTorqueActivation(

@@ -25,7 +25,6 @@ class MuscleGeometry;
 /// - \f$FlPE_2 = 5.0\f$
 /// - \f$eccentricForceMultiplier = 1.8\f$
 /// - \f$damping = 0.1\f$
-/// - \f$maxShorteningSpeed = 10.0\f$
 ///
 class BIORBD_API HillType : public Muscle
 {
@@ -124,33 +123,33 @@ public:
 
     ///
     /// \brief Return the muscle force vector at origin and insertion
-    /// \param model The joint model
+    /// \param updatedModel The joint model previously updated to the proper level
     /// \param Q The generalized coordinates
     /// \param Qdot The generalized velocities
     /// \param emg The EMG data
-    /// \param updateKin Update kinematics (0: don't update, 1:only muscles, [2: both kinematics and muscles])
+    /// \param updateMuscleParameters Update the kinematic related parameters of the muscles
     /// \return The force vector at origin and insertion
     ///
     virtual const utils::Scalar& force(
-        rigidbody::Joints& model,
+        rigidbody::Joints& updatedModel,
         const rigidbody::GeneralizedCoordinates& Q,
         const rigidbody::GeneralizedVelocity& Qdot,
         const State& emg,
-        int updateKin = 2);
+        bool updateMuscleParameters = true);
 
     ///
     /// \brief Return the muscle force vector at origin and insertion
-    /// \param model The joint model
+    /// \param updatedModel The joint model previously updated to the proper level
     /// \param Q The generalized coordinates
     /// \param emg The EMG data
-    /// \param updateKin Update kinematics (0: don't update, 1:only muscles, [2: both kinematics and muscles])
+    /// \param updateMuscleParameters Update the kinematic related parameters of the muscles
     /// \return The force vector at origin and insertion
     ///
     virtual const utils::Scalar& force(
-        rigidbody::Joints& model,
+        rigidbody::Joints& updatedModel,
         const rigidbody::GeneralizedCoordinates& Q,
         const State& emg,
-        int updateKin = 2);
+        bool updateMuscleParameters = true);
 
     ///
     /// \brief Return the Force-Length of the contractile element
@@ -245,8 +244,6 @@ protected:
     m_cste_eccentricForceMultiplier; ///< Constant used for ForceVelocity
     std::shared_ptr<utils::Scalar>
     m_cste_damping; ///< parameters used in damping
-    std::shared_ptr<utils::Scalar>
-    m_cste_maxShorteningSpeed; ///< Maximal velocity of shortening
 
 };
 

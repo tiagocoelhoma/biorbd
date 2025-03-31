@@ -18,6 +18,8 @@ class Matrix3d;
 class Vector;
 class Vector3d;
 class Range;
+class SpatialVector;
+class SpatialTransform;
 }
 
 namespace rigidbody
@@ -82,8 +84,9 @@ public:
     /// \param translationSequence The translation sequence
     /// \param rotationSequence Euler sequence of rotations
     /// \param QRanges Ranges of the translations and rotations dof. The length of QRanges must be equal to length of translations and rotations
-    /// \param QDotRanges Ranges of the translations and rotations dof velocity. The length of QDotRanges must be equal to length of translations and rotations
-    /// \param QDDotRanges Ranges of the translations and rotations dof acceleration. The length of QDDotRanges must be equal to length of translations and rotations
+    /// \param QdotRanges Ranges of the translations and rotations dof velocity. The length of QdotRanges must be equal to length of translations and rotations
+    /// \param QddotRanges Ranges of the translations and rotations dof acceleration. The length of QddotRanges must be equal to length of translations and rotations
+    /// \param jointDampings The damping of the joints to apply to the dynamics
     /// \param characteristics The characteristics of the semgent (mass, center of mass, inertia of the segment, etc)
     /// \param referenceFrame Transformation of the parent to child
     ///
@@ -93,8 +96,9 @@ public:
         const utils::String &translationSequence,
         const utils::String &rotationSequence,
         const std::vector<utils::Range>& QRanges,
-        const std::vector<utils::Range>& QDotRanges,
-        const std::vector<utils::Range>& QDDotRanges,
+        const std::vector<utils::Range>& QdotRanges,
+        const std::vector<utils::Range>& QddotRanges,
+        const std::vector<utils::Scalar>& jointDampings,
         const SegmentCharacteristics& characteristics,
         const utils::RotoTrans& referenceFrame);
 
@@ -104,8 +108,9 @@ public:
     /// \param parentName Name of the segment parent
     /// \param translationSequence The translation sequence
     /// \param QRanges Ranges of the translations and rotations dof. The length of QRanges must be equal to length of translations and rotations
-    /// \param QDotRanges Ranges of the translations and rotations dof velocity. The length of QDotRanges must be equal to length of translations and rotations
-    /// \param QDDotRanges Ranges of the translations and rotations dof acceleration. The length of QDDotRanges must be equal to length of translations and rotations
+    /// \param QdotRanges Ranges of the translations and rotations dof velocity. The length of QdotRanges must be equal to length of translations and rotations
+    /// \param QddotRanges Ranges of the translations and rotations dof acceleration. The length of QddotRanges must be equal to length of translations and rotations
+    /// \param jointDampings The damping of the joints to apply to the dynamics
     /// \param characteristics The characteristics of the semgent (mass, center of mass, inertia of the segment, etc)
     /// \param referenceFrame Transformation of the parent to child
     ///
@@ -114,8 +119,9 @@ public:
         const utils::String &parentName,
         const utils::String &translationSequence,
         const std::vector<utils::Range>& QRanges,
-        const std::vector<utils::Range>& QDotRanges,
-        const std::vector<utils::Range>& QDDotRanges,
+        const std::vector<utils::Range>& QdotRanges,
+        const std::vector<utils::Range>& QddotRanges,
+        const std::vector<utils::Scalar>& jointDampings,
         const SegmentCharacteristics& characteristics,
         const utils::RotoTrans& referenceFrame);
 
@@ -273,7 +279,7 @@ public:
     /// \param idx Index of the segment
     /// \return The segment
     ///
-    const Segment& segment(
+    Segment& segment(
         size_t idx) const;
 
     ///
@@ -281,14 +287,22 @@ public:
     /// \param name The name of the segment to return
     /// \return The segment
     ///
-    const Segment& segment(
+    Segment& segment(
         const utils::String& name) const;
 
     ///
     /// \brief Get all the segments
     /// \return  All the segments
     ///
-    const std::vector<Segment>& segments() const;
+    std::vector<Segment>& segments() const;
+
+    ///
+    /// \brief Get the joint dampings to apply to the dynamics
+    /// \param Qdot The generalized velocities
+    /// \return The joint dampings to apply to the dynamics
+    ///
+    GeneralizedTorque computeDampedTau(
+        const GeneralizedVelocity &Qdot) const;
 
 public:
 
@@ -298,7 +312,12 @@ public:
     /// \param Qdot The generalized velocities
     /// \param Qddot The generalized accelerations
     ///
-    void UpdateKinematicsCustom(
+#ifdef BIORBD_USE_CASADI_MATH
+Joints
+#else
+Joints&
+#endif
+UpdateKinematicsCustom(
         const GeneralizedCoordinates *Q = nullptr,
         const GeneralizedVelocity *Qdot = nullptr,
         const rigidbody::GeneralizedAcceleration *Qddot = nullptr);
@@ -318,52 +337,28 @@ public:
     );
 
     ///
-    /// \brief Return the joint coordinate system (JCS) in global reference frame at a given Q
-    /// \return The JCS in global reference frame
-    ///
-    /// This function assumes kinematics has been already updated
-    ///
-    std::vector<utils::RotoTrans> allGlobalJCS() const;
-
-    ///
     /// \brief Return the joint coordinate system (JCS) for the segment in global reference frame at a given Q
     /// \param Q The generalized coordinates
     /// \param name The name of the segment
+    /// \param updateKin If the kinematics should be updated
     /// \return The JCS of the segment in global reference frame at a given Q
     ///
     utils::RotoTrans globalJCS(
         const GeneralizedCoordinates &Q,
-        const utils::String &name);
+        const utils::String &name, 
+        bool updateKin = true);
 
     ///
     /// \brief Return the joint coordinate system (JCS) for the segment idx in global reference frame at a given Q
     /// \param Q The generalized coordinates
     /// \param idx The index of the segment
+    /// \param updateKin If the kinematics should be updated
     /// \return The JCS of the segment idx in global reference frame at a given Q
     ///
     utils::RotoTrans globalJCS(
         const GeneralizedCoordinates &Q,
-        size_t idx);
-
-    ///
-    /// \brief Return the joint coordinate system (JCS) for the segment in global reference
-    /// \param name The name of the segment
-    /// \return The JCS of the segment in global reference frame
-    ///
-    /// This function assumes kinematics has been already updated
-    ///
-    utils::RotoTrans globalJCS(
-        const utils::String &name) const;
-
-    ///
-    /// \brief Return the joint coordinate system (JCS) for the segment idx in global reference
-    /// \param idx The index of the segment
-    /// \return The JCS of the segment idx in global reference frame
-    ///
-    /// This function assumes kinematics has been already updated
-    ///
-    utils::RotoTrans globalJCS(
-        size_t idx) const;
+        size_t idx, 
+        bool updateKin = true);
 
     ///
     /// \brief Return all the joint coordinate system (JCS) in its parent reference frame
@@ -386,6 +381,162 @@ public:
     ///
     utils::RotoTrans localJCS(
         const size_t idx) const;
+
+    ///
+    /// \brief Interface to call CalcBodyToBaseCoordinates. It is pretty much useless in Eigen, but 
+    /// fixes an issue in Casadi where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param segmentName The name of the segment
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::Vector3d CalcBodyToBaseCoordinates(
+        const rigidbody::GeneralizedCoordinates& Q,
+        utils::String segmentName,
+        const utils::Vector3d &pointInLocal,
+        bool updateKin = true);
+
+    ///
+    /// \brief Interface to call CalcBodyToBaseCoordinates. It is pretty much useless in Eigen, but 
+    /// fixes an issue in Casadi where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param bodyId The index of the segment (obtainable with GetBodyId)
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::Vector3d CalcBodyToBaseCoordinates(
+        const rigidbody::GeneralizedCoordinates& Q,
+        unsigned int bodyId,
+        const utils::Vector3d &pointInLocal,
+        bool updateKin = true);
+
+    /// 
+    /// \brief Interface to call CalcPointVelocity. It is pretty much useless in Eigen, but 
+    /// fixes an issue in Casadi where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param Qdot The generalized velocities
+    /// \param segmentName The name of the segment
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::Vector3d CalcPointVelocity(
+        const rigidbody::GeneralizedCoordinates& Q,
+        const rigidbody::GeneralizedVelocity& Qdot,
+        utils::String segmentName,
+        const utils::Vector3d& pointInLocal,
+        bool updateKin = true
+    );
+
+    /// 
+    /// \brief Interface to call CalcPointVelocity. It is pretty much useless in Eigen, but 
+    /// fixes an issue in Casadi where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param Qdot The generalized velocities
+    /// \param bodyId The index of the segment (obtainable with GetBodyId)
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::Vector3d CalcPointVelocity(
+        const rigidbody::GeneralizedCoordinates& Q,
+        const rigidbody::GeneralizedVelocity& Qdot,
+        unsigned int bodyId,
+        const utils::Vector3d& pointInLocal,
+        bool updateKin = true
+    );
+
+    /// 
+    /// \brief Interface to call CalcPointVelocity6D. It is pretty much useless in Eigen, but 
+    /// fixes an issue in Casadi where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param Qdot The generalized velocities
+    /// \param segmentName The name of the segment
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::SpatialVector CalcPointVelocity6D(
+        const rigidbody::GeneralizedCoordinates& Q,
+        const rigidbody::GeneralizedVelocity& Qdot,
+        utils::String segmentName,
+        const utils::Vector3d& pointInLocal,
+        bool updateKin = true
+    );
+
+    /// 
+    /// \brief Interface to call CalcPointVelocity6D. It is pretty much useless in Eigen, but 
+    /// fixes an issue in Casadi where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param Qdot The generalized velocities
+    /// \param bodyId The index of the segment (obtainable with GetBodyId)
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::SpatialVector CalcPointVelocity6D(
+        const rigidbody::GeneralizedCoordinates& Q,
+        const rigidbody::GeneralizedVelocity& Qdot,
+        unsigned int bodyId,
+        const utils::Vector3d& pointInLocal,
+        bool updateKin = true
+    );
+
+    /// 
+    /// \brief Interface to call CalcPointAcceleration. It is pretty much useless in Eigen, but 
+    /// fixes an issue in Casadi where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param Qdot The generalized velocities
+    /// \param Qddot The generalized accelerations
+    /// \param segmentName The name of the segment
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::Vector3d CalcPointAcceleration(
+        const rigidbody::GeneralizedCoordinates& Q,
+        const rigidbody::GeneralizedVelocity& Qdot,
+        const rigidbody::GeneralizedAcceleration& Qddot,
+        utils::String segmentName,
+        const utils::Vector3d& pointInLocal,
+        bool updateKin = true
+    );
+
+    /// 
+    /// \brief Interface to call CalcPointAcceleration. It is pretty much useless in Eigen, but 
+    /// fixes an issue in Casadi where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param Qdot The generalized velocities
+    /// \param Qddot The generalized accelerations
+    /// \param bodyId The index of the segment (obtainable with GetBodyId)
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::Vector3d CalcPointAcceleration(
+        const rigidbody::GeneralizedCoordinates& Q,
+        const rigidbody::GeneralizedVelocity& Qdot,
+        const rigidbody::GeneralizedAcceleration& Qddot,
+        unsigned int bodyId,
+        const utils::Vector3d& pointInLocal,
+        bool updateKin = true
+    );
+
+    ///
+    /// \brief Interface to call CalcPointJacobian. Instead of sending the jacobian as an parameter, it is returned.
+    /// It is pretty much useless in Eigen, but fixes an issue in Casadi where RBDL changes internal variables which 
+    /// creates a free variables issue
+    /// \param Q The generalized coordinates/// 
+    /// \param segmentName The name of the segment
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::Matrix CalcPointJacobian(
+        const rigidbody::GeneralizedCoordinates& Q,
+        utils::String segmentName,
+        const utils::Vector3d& pointInLocal,
+        bool updateKin = true
+    );
+
+    ///
+    /// \brief Interface to call CalcPointJacobian. Instead of sending the jacobian as an parameter, it is returned.
+    /// It is pretty much useless in Eigen, but fixes an issue in Casadi where RBDL changes internal variables which 
+    /// creates a free variables issue
+    /// \param Q The generalized coordinates
+    /// \param bodyId The index of the segment (obtainable with GetBodyId)
+    /// \param pointInLocal The point in the body
+    /// \param updateKin If the kinematics of the model should be computed (always true for casadi)
+    utils::Matrix CalcPointJacobian(
+        const rigidbody::GeneralizedCoordinates& Q,
+        unsigned int bodyId,
+        const utils::Vector3d& pointInLocal,
+        bool updateKin = true
+    );
 
     ///
     /// \brief Project a point on specific axis of a segment
@@ -493,6 +644,37 @@ public:
     utils::Vector3d CoM(
         const GeneralizedCoordinates &Q,
         bool updateKin=true);
+
+    /// 
+    /// \brief Interface to CalcCenterOfMass. It is pretty much useless in Eigen, but fixes an issue in Casadi 
+    /// where RBDL changes internal variables which creates a free variables issue
+    /// \param Q The current joint positions
+    /// \param Qdot The current joint velocities
+    /// \param Qddot (optional input) The current joint accelerations
+    /// \param mass (output) total mass of the model
+    /// \param com (output) location of the Center of Mass of the model in base coordinates
+    /// \param comVelocity (optional output) linear velocity of the COM in base coordinates
+    /// \param comAcceleration (optional output) linear acceleration of the COM in base coordinates
+    /// \param angularMomentum (optional output) angular momentum of the model at the COM in base coordinates
+    /// \param changeOfAngularMomentum (optional output) change of angular momentum of the model at the COM in base coordinates
+    /// \param updateKin (optional input) whether the kinematics should be updated (defaults to true)
+    /// 
+    /// \note When wanting to compute com_acceleration or change_of_angular
+    /// momentum one has to provide Qddot. In all other cases one can use NULL
+    /// as argument for Qddot.
+    /// 
+    void CalcCenterOfMass(
+        const rigidbody::GeneralizedCoordinates& Q,
+        const rigidbody::GeneralizedVelocity& Qdot,
+        const rigidbody::GeneralizedAcceleration* Qddot,
+        utils::Scalar& mass,
+        utils::Vector3d& com,
+        utils::Vector3d* comVelocity = NULL,
+        utils::Vector3d* comAcceleration = NULL,
+        utils::Vector3d* angularMomentum = NULL,
+        utils::Vector3d* changeOfAngularMomentum = NULL,
+        bool updateKin = true
+    );
 
     ///
     /// \brief Return the position of the center of mass of each segment
@@ -745,11 +927,11 @@ public:
         bool updateKin);
 
     ///
-    /// \brief Calculate the segment center of mass angular momentum with respect to the global center of mass
+    /// \brief Calculate the segment's contribution to the whole body angular momentum with respect to the global center of mass / formulae used: H_i = m_i * (r_i - r_com) x (v_i - v_com) + I_i * w_i) / The matrix returned contains a contribution for each last dof of a segment, zeros on all other DoFs.
     /// \param Q The generalized coordinates
     /// \param Qdot The generalized velocities
     /// \param updateKin If the kinematics of the model should be computed
-    /// \return The segments center of mass angular momentum
+    /// \return A matrix of each segment's angular momentum contribution (3xnbQ)
     ///
     std::vector<utils::Vector3d> CalcSegmentsAngularMomentum (
         const GeneralizedCoordinates &Q,
@@ -757,12 +939,12 @@ public:
         bool updateKin);
 
     ///
-    /// \brief Calculate the segment center of mass angular momentum with respect to the global center of mass
+    /// \brief Calculate the segment's contribution to the whole body angular momentum with respect to the global center of mass / formulae used: H_i = m_i * (r_i - r_com) x (v_i - v_com) + I_i * w_i) / The matrix returned contains a contribution for each last dof of a segment, zeros on all other DoFs.
     /// \param Q The generalized coordinates
     /// \param Qdot The generalized velocities
     /// \param Qddot The generalized accelerations
     /// \param updateKin If the kinematics of the model should be computed
-    /// \return The segments center of mass angular momentum
+    /// \return A matrix of each segment's angular momentum contribution (3xnbQ)
     ///
     std::vector<utils::Vector3d> CalcSegmentsAngularMomentum (
         const GeneralizedCoordinates &Q,
@@ -795,7 +977,7 @@ public:
         const GeneralizedCoordinates &Q,
         size_t segmentIdx,
         const utils::Matrix3d &rotation,
-        RigidBodyDynamics::Math::MatrixNd &G,
+        utils::Matrix &G,
         bool updateKin);
 
     ///
@@ -812,12 +994,12 @@ public:
     ///
     /// \brief Return the derivate of Q in function of Qdot (if not Quaternion, Qdot is directly returned)
     /// \param Q The generalized coordinates
-    /// \param QDot The generalized velocities
+    /// \param Qdot The generalized velocities
     /// \param k_stab
     /// \return The derivate of Q in function of Qdot
     ///
     GeneralizedVelocity computeQdot(const GeneralizedCoordinates &Q,
-        const GeneralizedCoordinates &QDot,
+        const GeneralizedCoordinates &Qdot,
         const utils::Scalar &k_stab = 1);
 
     ///
@@ -836,13 +1018,13 @@ public:
     ///
     /// \brief Interface for the Kinetic Energy of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \return The Kinetic Energy
     ///
     ///
     utils::Scalar KineticEnergy(
     const rigidbody::GeneralizedCoordinates &Q,
-    const rigidbody::GeneralizedVelocity &QDot,
+    const rigidbody::GeneralizedVelocity &Qdot,
     bool updateKin = true);
 
     ///
@@ -858,25 +1040,25 @@ public:
     ///
     /// \brief Compute the Lagrangian of the system
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \return The Lagrangian:  kinetic - potential energy
     ///
     ///
     utils::Scalar Lagrangian(
     const rigidbody::GeneralizedCoordinates &Q,
-    const rigidbody::GeneralizedVelocity &QDot,
+    const rigidbody::GeneralizedVelocity &Qdot,
     bool updateKin = true);
 
     ///
     /// \brief Compute the Total Energy of System
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \return The total energy: kinetic + potential energy
     ///
     ///
     utils::Scalar TotalEnergy(
     const rigidbody::GeneralizedCoordinates &Q,
-    const rigidbody::GeneralizedVelocity &QDot,
+    const rigidbody::GeneralizedVelocity &Qdot,
     bool updateKin = true);
 
 
@@ -885,74 +1067,74 @@ public:
     ///
     /// \brief Interface for the inverse dynamics of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
-    /// \param QDDot The Generalzed Acceleration
+    /// \param Qdot The Generalized Velocities
+    /// \param Qddot The Generalzed Acceleration
     /// \return The Generalized Torques
     ///
     GeneralizedTorque InverseDynamics(const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
-        const rigidbody::GeneralizedAcceleration& QDDot
+        const GeneralizedVelocity& Qdot,
+        const rigidbody::GeneralizedAcceleration& Qddot
     );
     ///
     /// \brief Interface for the inverse dynamics of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
-    /// \param QDDot The Generalzed Acceleration
+    /// \param Qdot The Generalized Velocities
+    /// \param Qddot The Generalzed Acceleration
     /// \param externalForces External force acting on the system if there are any
     /// \return The Generalized Torques
     ///
     GeneralizedTorque InverseDynamics(const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
-        const rigidbody::GeneralizedAcceleration& QDDot,
+        const GeneralizedVelocity& Qdot,
+        const rigidbody::GeneralizedAcceleration& Qddot,
         rigidbody::ExternalForceSet& externalForces
     );
 
     ///
     /// \brief Interface to NonLinearEffect
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \return The Generalized Torques of the bias effects
     ///
     GeneralizedTorque NonLinearEffect(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot
+        const GeneralizedVelocity& Qdot
     );
     ///
     /// \brief Interface to NonLinearEffect
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \param externalForces External force acting on the system if there are any
     /// \return The Generalized Torques of the bias effects
     ///
     GeneralizedTorque NonLinearEffect(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
+        const GeneralizedVelocity& Qdot,
         rigidbody::ExternalForceSet& externalForces
     );
 
     ///
     /// \brief Interface for the forward dynamics of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \param Tau The Generalized Torques
     /// \return The Generalized Accelerations
     ///
     rigidbody::GeneralizedAcceleration ForwardDynamics(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
+        const GeneralizedVelocity& Qdot,
         const GeneralizedTorque& Tau
     );
     ///
     /// \brief Interface for the forward dynamics of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \param Tau The Generalized Torques
     /// \param externalForces External force acting on the system if there are any
     /// \return The Generalized Accelerations
     ///
     rigidbody::GeneralizedAcceleration ForwardDynamics(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
+        const GeneralizedVelocity& Qdot,
         const GeneralizedTorque& Tau,
         rigidbody::ExternalForceSet& externalForces
     );
@@ -960,95 +1142,104 @@ public:
     ///
     /// \brief Biorbd's implementation of forward dynamics with a free floating base
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
-    /// \param QDDotJ The Generalized Accelerations of the joints (no root)
+    /// \param Qdot The Generalized Velocities
+    /// \param QddotJoints The Generalized Accelerations of the joints (no root)
     /// \return The Generalized Accelerations of the root
     ///
     rigidbody::GeneralizedAcceleration ForwardDynamicsFreeFloatingBase(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
-        const GeneralizedAcceleration& QJointsDDot);
+        const GeneralizedVelocity& Qdot,
+        const GeneralizedAcceleration& QddotJoints
+    );
 
     ///
     /// \brief Interface for the forward dynamics with contact of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \param Tau The Generalized Torques
+    /// \param updateKin If the kinematics of the model should be computed
     /// \return The Generalized Accelerations
     ///
     rigidbody::GeneralizedAcceleration ForwardDynamicsConstraintsDirect(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
-        const GeneralizedTorque& Tau
+        const GeneralizedVelocity& Qdot,
+        const GeneralizedTorque& Tau,
+        bool updateKin = true
     );
     ///
     /// \brief Interface for the forward dynamics with contact of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \param Tau The Generalized Torques
     /// \param externalForces External force acting on the system if there are any
+    /// \param updateKin If the kinematics of the model should be computed
     /// \return The Generalized Accelerations
     ///
     rigidbody::GeneralizedAcceleration ForwardDynamicsConstraintsDirect(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
+        const GeneralizedVelocity& Qdot,
         const GeneralizedTorque& Tau,
-        rigidbody::ExternalForceSet& externalForces
+        rigidbody::ExternalForceSet& externalForces,
+        bool updateKin = true
     );
     ///
     /// \brief Interface for the forward dynamics with contact of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \param Tau The Generalized Torques
     /// \param CS The Constraint set that will be filled
+    /// \param updateKin If the kinematics of the model should be computed
     /// \return The Generalized Accelerations
     ///
     rigidbody::GeneralizedAcceleration ForwardDynamicsConstraintsDirect(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
-        const GeneralizedTorque& Tau,
-        Contacts& CS
-    );
-    ///
-    /// \brief Interface for the forward dynamics with contact of RBDL
-    /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
-    /// \param Tau The Generalized Torques
-    /// \param CS The Constraint set that will be filled
-    /// \param externalForces External force acting on the system if there are any
-    /// \return The Generalized Accelerations
-    ///
-    rigidbody::GeneralizedAcceleration ForwardDynamicsConstraintsDirect(
-        const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
+        const GeneralizedVelocity& Qdot,
         const GeneralizedTorque& Tau,
         Contacts& CS,
-        rigidbody::ExternalForceSet& externalForces
+        bool updateKin = true
+    );
+    ///
+    /// \brief Interface for the forward dynamics with contact of RBDL
+    /// \param Q The Generalized Coordinates
+    /// \param Qdot The Generalized Velocities
+    /// \param Tau The Generalized Torques
+    /// \param CS The Constraint set that will be filled
+    /// \param externalForces External force acting on the system if there are any
+    /// \param updateKin If the kinematics of the model should be computed
+    /// \return The Generalized Accelerations
+    ///
+    rigidbody::GeneralizedAcceleration ForwardDynamicsConstraintsDirect(
+        const GeneralizedCoordinates& Q,
+        const GeneralizedVelocity& Qdot,
+        const GeneralizedTorque& Tau,
+        Contacts& CS,
+        rigidbody::ExternalForceSet& externalForces,
+        bool updateKin = true
     );
 
     ///
     /// \brief Interface for contacts of the forward dynamics with contact of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \param Tau The Generalized Torques
     /// \return The Contraint set
     ///
     utils::Vector ContactForcesFromForwardDynamicsConstraintsDirect(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
+        const GeneralizedVelocity& Qdot,
         const GeneralizedTorque& Tau
     );
     ///
     /// \brief Interface for contacts of the forward dynamics with contact of RBDL
     /// \param Q The Generalized Coordinates
-    /// \param QDot The Generalized Velocities
+    /// \param Qdot The Generalized Velocities
     /// \param Tau The Generalized Torques
     /// \param externalForces External force acting on the system if there are any
     /// \return The Contraint set
     ///
     utils::Vector ContactForcesFromForwardDynamicsConstraintsDirect(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDot,
+        const GeneralizedVelocity& Qdot,
         const GeneralizedTorque& Tau,
         rigidbody::ExternalForceSet& externalForces
     );
@@ -1065,14 +1256,14 @@ public:
         bool updateKin = true);
 
     ///
-    /// \brief Compute the QDot post from an impact
+    /// \brief Compute the Qdot post from an impact
     /// \param Q The Generalized Coordinates
-    /// \param QDotPre The Generalized Velocities before impact
+    /// \param QdotPre The Generalized Velocities before impact
     /// \return The Generalized Velocities post acceleration
     ///
     GeneralizedVelocity ComputeConstraintImpulsesDirect(
         const GeneralizedCoordinates& Q,
-        const GeneralizedVelocity& QDotPre);
+        const GeneralizedVelocity& QdotPre);
 
 protected:
     std::shared_ptr<std::vector<Segment>>
@@ -1099,20 +1290,10 @@ protected:
     /// \param updateKin If the kinematics of the model should be computed
     /// \return The JCS of the segment in global reference frame
     ///
-    RigidBodyDynamics::Math::SpatialTransform CalcBodyWorldTransformation(
+    utils::SpatialTransform CalcBodyWorldTransformation(
         const GeneralizedCoordinates &Q,
         const size_t segmentIdx,
         bool updateKin = true);
-
-    ///
-    /// \brief Calculate the joint coordinate system (JCS) in global of a specified segment
-    /// \param segmentIdx The index of the segment
-    /// \return The JCS in global
-    ///
-    /// This function assumes that the kinematics was previously updated
-    ///
-    RigidBodyDynamics::Math::SpatialTransform CalcBodyWorldTransformation(
-        const size_t segmentIdx) const;
 
     ///
     /// \brief Return the mesh vertices of segment idx

@@ -1,6 +1,7 @@
 #define BIORBD_API_EXPORTS
 
 #include "Utils/Error.h"
+#include "RigidBody/Joints.h"
 #include "RigidBody/GeneralizedCoordinates.h"
 #include "RigidBody/GeneralizedVelocity.h"
 #include "InternalForces/Muscles/Characteristics.h"
@@ -27,8 +28,7 @@ internal_forces::muscles::HillType::HillType() :
     m_cste_FlPE_1(std::make_shared<utils::Scalar>(10.0)),
     m_cste_FlPE_2(std::make_shared<utils::Scalar>(5.0)),
     m_cste_eccentricForceMultiplier(std::make_shared<utils::Scalar>(1.8)),
-    m_cste_damping(std::make_shared<utils::Scalar>(0.1)),
-    m_cste_maxShorteningSpeed(std::make_shared<utils::Scalar>(10.0))
+    m_cste_damping(std::make_shared<utils::Scalar>(0.1))
 {
     setType();
 }
@@ -50,8 +50,7 @@ internal_forces::muscles::HillType::HillType(
     m_cste_FlPE_1(std::make_shared<utils::Scalar>(10.0)),
     m_cste_FlPE_2(std::make_shared<utils::Scalar>(5.0)),
     m_cste_eccentricForceMultiplier(std::make_shared<utils::Scalar>(1.8)),
-    m_cste_damping(std::make_shared<utils::Scalar>(0.1)),
-    m_cste_maxShorteningSpeed(std::make_shared<utils::Scalar>(10.0))
+    m_cste_damping(std::make_shared<utils::Scalar>(0.1))
 {
     setType();
 }
@@ -74,8 +73,7 @@ internal_forces::muscles::HillType::HillType(
     m_cste_FlPE_1(std::make_shared<utils::Scalar>(10.0)),
     m_cste_FlPE_2(std::make_shared<utils::Scalar>(5.0)),
     m_cste_eccentricForceMultiplier(std::make_shared<utils::Scalar>(1.8)),
-    m_cste_damping(std::make_shared<utils::Scalar>(0.1)),
-    m_cste_maxShorteningSpeed(std::make_shared<utils::Scalar>(10.0))
+    m_cste_damping(std::make_shared<utils::Scalar>(0.1))
 {
     setType();
 }
@@ -98,8 +96,7 @@ internal_forces::muscles::HillType::HillType(
     m_cste_FlPE_1(std::make_shared<utils::Scalar>(10.0)),
     m_cste_FlPE_2(std::make_shared<utils::Scalar>(5.0)),
     m_cste_eccentricForceMultiplier(std::make_shared<utils::Scalar>(1.8)),
-    m_cste_damping(std::make_shared<utils::Scalar>(0.1)),
-    m_cste_maxShorteningSpeed(std::make_shared<utils::Scalar>(10.0))
+    m_cste_damping(std::make_shared<utils::Scalar>(0.1))
 {
     setType();
 }
@@ -122,8 +119,7 @@ internal_forces::muscles::HillType::HillType(
     m_cste_FlPE_1(std::make_shared<utils::Scalar>(10.0)),
     m_cste_FlPE_2(std::make_shared<utils::Scalar>(5.0)),
     m_cste_eccentricForceMultiplier(std::make_shared<utils::Scalar>(1.8)),
-    m_cste_damping(std::make_shared<utils::Scalar>(0.1)),
-    m_cste_maxShorteningSpeed(std::make_shared<utils::Scalar>(10.0))
+    m_cste_damping(std::make_shared<utils::Scalar>(0.1))
 {
     setType();
 }
@@ -145,7 +141,6 @@ internal_forces::muscles::HillType::HillType(const internal_forces::muscles::Mus
     m_cste_FlPE_2 = m_tp.m_cste_FlPE_2;
     m_cste_eccentricForceMultiplier = m_tp.m_cste_eccentricForceMultiplier;
     m_cste_damping = m_tp.m_cste_damping;
-    m_cste_maxShorteningSpeed = m_tp.m_cste_maxShorteningSpeed;
 }
 
 internal_forces::muscles::HillType::HillType(
@@ -167,7 +162,6 @@ internal_forces::muscles::HillType::HillType(
     m_cste_FlPE_2 = m_tp->m_cste_FlPE_2;
     m_cste_eccentricForceMultiplier = m_tp->m_cste_eccentricForceMultiplier;
     m_cste_damping = m_tp->m_cste_damping;
-    m_cste_maxShorteningSpeed = m_tp->m_cste_maxShorteningSpeed;
 }
 
 internal_forces::muscles::HillType internal_forces::muscles::HillType::DeepCopy() const
@@ -192,7 +186,6 @@ void internal_forces::muscles::HillType::DeepCopy(const internal_forces::muscles
     *m_cste_FlPE_2 = *other.m_cste_FlPE_2;
     *m_cste_eccentricForceMultiplier = *other.m_cste_eccentricForceMultiplier;
     *m_cste_damping = *other.m_cste_damping;
-    *m_cste_maxShorteningSpeed = *other.m_cste_maxShorteningSpeed;
 }
 
 const utils::Scalar& internal_forces::muscles::HillType::force(
@@ -210,24 +203,14 @@ const utils::Scalar& internal_forces::muscles::HillType::force(
 }
 
 const utils::Scalar& internal_forces::muscles::HillType::force(
-    rigidbody::Joints &model,
+    rigidbody::Joints &updatedModel,
     const rigidbody::GeneralizedCoordinates &Q,
     const rigidbody::GeneralizedVelocity &Qdot,
     const internal_forces::muscles::State &emg,
-    int updateKin)
+    bool updateMuscleParameters)
 {
-#ifdef BIORBD_USE_CASADI_MATH
-    updateKin = 2;
-#endif
     // Update the configuration
-    if (updateKin == 1) {
-        updateOrientations(model,Q,Qdot,false);
-    } else if (updateKin == 2) {
-        updateOrientations(model,Q,Qdot,2);
-    } else {
-        utils::Error::check(updateKin == 0,
-                                    "Wrong level of update in force function");
-    }
+    if (updateMuscleParameters) updateOrientations(updatedModel, Q, Qdot);
 
     // Computation
     return force(emg);
@@ -237,7 +220,7 @@ const utils::Scalar& internal_forces::muscles::HillType::force(
     rigidbody::Joints &,
     const rigidbody::GeneralizedCoordinates &,
     const internal_forces::muscles::State &,
-    int)
+    bool)
 {
     utils::Error::raise("Hill type needs velocity");
 #ifdef _WIN32
@@ -282,14 +265,14 @@ void internal_forces::muscles::HillType::computeDamping()
 #ifdef BIORBD_USE_CASADI_MATH
     *m_damping = IF_ELSE_NAMESPACE::if_else_zero(
                   IF_ELSE_NAMESPACE::gt(position().velocity(), 0),
-                ((position().velocity() / (characteristics().optimalLength() * *m_cste_maxShorteningSpeed))
+                ((position().velocity() / (characteristics().optimalLength() * this->characteristics().maxShorteningSpeed()))
                 * *m_cste_damping));
 
 #else
     if (position().velocity() > 0) {
         *m_damping = (position().velocity()
                      /
-                     (characteristics().optimalLength() * *m_cste_maxShorteningSpeed)) * *m_cste_damping;
+                     (characteristics().optimalLength() * this->characteristics().maxShorteningSpeed())) * *m_cste_damping;
     } else {
         *m_damping = 0;
     }
@@ -313,18 +296,18 @@ void internal_forces::muscles::HillType::computeFvCE()
 #ifdef BIORBD_USE_CASADI_MATH
     *m_FvCE = IF_ELSE_NAMESPACE::if_else(
                   IF_ELSE_NAMESPACE::le(v, 0),
-                  (1.0-std::fabs(v) / *m_cste_maxShorteningSpeed) /
-                  (1.0+std::fabs(v) / *m_cste_maxShorteningSpeed / *m_cste_FvCE_1),
-                  (1.0-1.33*v / *m_cste_maxShorteningSpeed / *m_cste_FvCE_2) /
-                  (1-v / *m_cste_maxShorteningSpeed / *m_cste_FvCE_2)
+                  (1.0-std::fabs(v) / this->characteristics().maxShorteningSpeed()) /
+                  (1.0+std::fabs(v) / this->characteristics().maxShorteningSpeed() / *m_cste_FvCE_1),
+                  (1.0-1.33*v / this->characteristics().maxShorteningSpeed() / *m_cste_FvCE_2) /
+                  (1-v / this->characteristics().maxShorteningSpeed() / *m_cste_FvCE_2)
               );
 #else
     if (v<=0)
-        *m_FvCE = (1-fabs(v) / *m_cste_maxShorteningSpeed) /
-                  (1+fabs(v) / *m_cste_maxShorteningSpeed / *m_cste_FvCE_1);
+        *m_FvCE = (1-fabs(v) / this->characteristics().maxShorteningSpeed()) /
+                  (1+fabs(v) / this->characteristics().maxShorteningSpeed() / *m_cste_FvCE_1);
     else
-        *m_FvCE = (1-1.33*v / *m_cste_maxShorteningSpeed / *m_cste_FvCE_2) /
-                  (1-v / *m_cste_maxShorteningSpeed / *m_cste_FvCE_2);
+        *m_FvCE = (1-1.33*v / this->characteristics().maxShorteningSpeed() / *m_cste_FvCE_2) /
+                  (1-v / this->characteristics().maxShorteningSpeed() / *m_cste_FvCE_2);
 #endif
 }
 

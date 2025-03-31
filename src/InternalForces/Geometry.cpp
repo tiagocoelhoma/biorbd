@@ -26,7 +26,6 @@ internal_forces::Geometry::Geometry() :
     m_pointsInGlobal(std::make_shared<std::vector<utils::Vector3d>>()),
     m_pointsInLocal(std::make_shared<std::vector<utils::Vector3d>>()),
     m_jacobian(std::make_shared<utils::Matrix>()),
-    m_G(std::make_shared<utils::Matrix>()),
     m_jacobianLength(std::make_shared<utils::Matrix>()),
     m_length(std::make_shared<utils::Scalar>(0)),
     m_velocity(std::make_shared<utils::Scalar>(0)),
@@ -49,7 +48,6 @@ internal_forces::Geometry::Geometry(
     m_pointsInGlobal(std::make_shared<std::vector<utils::Vector3d>>()),
     m_pointsInLocal(std::make_shared<std::vector<utils::Vector3d>>()),
     m_jacobian(std::make_shared<utils::Matrix>()),
-    m_G(std::make_shared<utils::Matrix>()),
     m_jacobianLength(std::make_shared<utils::Matrix>()),
     m_length(std::make_shared<utils::Scalar>(0)),
     m_velocity(std::make_shared<utils::Scalar>(0)),
@@ -82,7 +80,6 @@ void internal_forces::Geometry::DeepCopy(const internal_forces::Geometry &other)
         (*m_pointsInLocal)[i] = (*other.m_pointsInLocal)[i].DeepCopy();
     }
     *m_jacobian = *other.m_jacobian;
-    *m_G = *other.m_G;
     *m_jacobianLength = *other.m_jacobianLength;
     *m_length = *other.m_length;
     *m_velocity = *other.m_velocity;
@@ -94,63 +91,34 @@ void internal_forces::Geometry::DeepCopy(const internal_forces::Geometry &other)
 
 // ------ PUBLIC FUNCTIONS ------ //
 void internal_forces::Geometry::updateKinematics(
-    rigidbody::Joints &model,
+    rigidbody::Joints &updatedModel,
     const rigidbody::GeneralizedCoordinates *Q,
-    const rigidbody::GeneralizedVelocity *Qdot,
-    int updateKin)
+    const rigidbody::GeneralizedVelocity *Qdot)
 {
-    if (*m_posAndJacoWereForced) {
-        utils::Error::warning(
-            false,
-            "Warning, using updateKinematics overrides the"
-            " previously sent position and jacobian");
-        *m_posAndJacoWereForced = false;
-    }
-
-    // Make sure the model is in the right configuration
-#ifdef BIORBD_USE_CASADI_MATH
-    updateKin = 2;
-#endif
-    if (updateKin > 1) {
-        model.UpdateKinematicsCustom(Q, Qdot, nullptr);
-    }
+    *m_posAndJacoWereForced = false;
 
     // Position of the points in space
-    setPointsInGlobal(model, *Q);
+    setPointsInGlobal(updatedModel, *Q);
 
     // Compute the Jacobian of the muscle points
-    jacobian(model, *Q);
+    jacobian(updatedModel, *Q);
 
     // Complete the update
     _updateKinematics(Qdot, nullptr);
 }
-void internal_forces::Geometry::updateKinematics(rigidbody::Joints
-        &model,
-        internal_forces::PathModifiers &pathModifiers,
-        const rigidbody::GeneralizedCoordinates *Q,
-        const rigidbody::GeneralizedVelocity *Qdot,
-        int updateKin)
+
+void internal_forces::Geometry::updateKinematics(
+    rigidbody::Joints& updatedModel,
+    internal_forces::PathModifiers &pathModifiers,
+    const rigidbody::GeneralizedCoordinates *Q,
+    const rigidbody::GeneralizedVelocity *Qdot)
 {
-    if (*m_posAndJacoWereForced) {
-        utils::Error::warning(
-            false, "Warning, using updateKinematics overrides the"
-            " previously sent position and jacobian");
-        *m_posAndJacoWereForced = false;
-    }
-#ifdef BIORBD_USE_CASADI_MATH
-    updateKin = 2;
-#endif
-
-    // Ensure the model is in the right configuration
-    if (updateKin > 1) {
-        model.UpdateKinematicsCustom(Q, Qdot);
-    }
-
+    *m_posAndJacoWereForced = false;
     // Position of the points in space
-    setPointsInGlobal(model, *Q, &pathModifiers);
+    setPointsInGlobal(updatedModel, *Q, &pathModifiers);
 
     // Compute the Jacobian of the muscle points
-    jacobian(model, *Q);
+    jacobian(updatedModel, *Q);
 
     // Complete the update
     _updateKinematics(Qdot, &pathModifiers);
@@ -208,71 +176,71 @@ const
 // Position of the muscles in space
 const utils::Vector3d &internal_forces::Geometry::originInGlobal() const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed at least once before calling originInLocal()");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed at least once before calling originInLocal()");
     return *m_originInGlobal;
 }
 const utils::Vector3d &internal_forces::Geometry::insertionInGlobal()
 const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed at least once before calling insertionInGlobal()");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed at least once before calling insertionInGlobal()");
     return *m_insertionInGlobal;
 }
 const std::vector<utils::Vector3d>
 &internal_forces::Geometry::pointsInGlobal() const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed at least once before calling musclesPointsInGlobal()");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed at least once before calling musclesPointsInGlobal()");
     return *m_pointsInGlobal;
 }
 
 // Return the length and muscular velocity
 const utils::Scalar& internal_forces::Geometry::length() const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed at least before calling length()");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed at least before calling length()");
     return *m_length;
 }
 
 const utils::Scalar& internal_forces::Geometry::velocity() const
 {
-    utils::Error::check(*m_isVelocityComputed,
-                                "Geometry must be computed before calling velocity()");
+    utils::Error::check(
+        *m_isVelocityComputed, "Geometry must be computed before calling velocity()");
     return *m_velocity;
 }
 
 // Return the Jacobian
 const utils::Matrix& internal_forces::Geometry::jacobian() const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed before calling jacobian()");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed before calling jacobian()");
     return *m_jacobian;
 } // Return the last Jacobian
 utils::Matrix internal_forces::Geometry::jacobianOrigin() const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed before calling jacobianOrigin()");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed before calling jacobianOrigin()");
     return m_jacobian->block(0,0,3,m_jacobian->cols());
 }
 utils::Matrix internal_forces::Geometry::jacobianInsertion() const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed before calling jacobianInsertion()");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed before calling jacobianInsertion()");
     return m_jacobian->block(m_jacobian->rows()-3,0,3,m_jacobian->cols());
 }
 utils::Matrix internal_forces::Geometry::jacobian(
     size_t idxViaPoint) const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed before calling jacobian(i)");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed before calling jacobian(i)");
     return m_jacobian->block(3* static_cast<unsigned int>(idxViaPoint),0,3,m_jacobian->cols());
 }
 
 const utils::Matrix &internal_forces::Geometry::jacobianLength() const
 {
-    utils::Error::check(*m_isGeometryComputed,
-                                "Geometry must be computed before calling jacobianLength()");
+    utils::Error::check(
+        *m_isGeometryComputed, "Geometry must be computed before calling jacobianLength()");
     return *m_jacobianLength;
 }
 
@@ -301,9 +269,7 @@ const utils::Vector3d &internal_forces::Geometry::originInGlobal(
     const rigidbody::GeneralizedCoordinates &Q)
 {
     // Return the position of the marker in function of the given position
-    m_originInGlobal->block(0,0,3,
-                            1) = RigidBodyDynamics::CalcBodyToBaseCoordinates(model, Q,
-                                    model.GetBodyId(m_origin->parent().c_str()), *m_origin,false);
+    m_originInGlobal->block(0,0,3,1) = model.CalcBodyToBaseCoordinates(Q, m_origin->parent(), *m_origin, false);
     return *m_originInGlobal;
 }
 
@@ -311,9 +277,9 @@ const utils::Vector3d &internal_forces::Geometry::insertionInGlobal(
     rigidbody::Joints &model,
     const rigidbody::GeneralizedCoordinates &Q)
 {
+
     // Return the position of the marker in function of the given position
-    m_insertionInGlobal->block(0,0,3,1) = RigidBodyDynamics::CalcBodyToBaseCoordinates(
-                model, Q, model.GetBodyId(m_insertion->parent().c_str()), *m_insertion,false);
+    m_insertionInGlobal->block(0,0,3,1) = model.CalcBodyToBaseCoordinates(Q, m_insertion->parent(), *m_insertion, false);
     return *m_insertionInGlobal;
 }
 
@@ -338,26 +304,22 @@ void internal_forces::Geometry::setPointsInGlobal(
     // Do not apply on wrapping objects
     if (pathModifiers->nbWraps()!=0) {
         // CHECK TO MODIFY BEFOR GOING FORWARD WITH PROJECTS
-        utils::Error::check(pathModifiers->nbVia() == 0,
-                                    "Cannot mix wrapping and via points yet") ;
-        utils::Error::check(pathModifiers->nbWraps() < 2,
-                                    "Cannot compute more than one wrapping yet");
+        utils::Error::check(
+            pathModifiers->nbVia() == 0, "Cannot mix wrapping and via points yet") ;
+        utils::Error::check(
+            pathModifiers->nbWraps() < 2, "Cannot compute more than one wrapping yet");
 
         // Get the matrix of Rt of the wrap
         internal_forces::WrappingObject& w =
             static_cast<internal_forces::WrappingObject&>(pathModifiers->object(0));
-        const utils::RotoTrans& RT = w.RT(model,Q);
+        const utils::RotoTrans& RT = w.RT(model, Q, false);
 
         // Alias
-        const utils::Vector3d& po_mus = originInGlobal(model,
-                                                Q);  // Origin on bone
-        const utils::Vector3d& pi_mus = insertionInGlobal(model,
-                                                Q); // Insertion on bone
+        const utils::Vector3d& po_mus = originInGlobal(model, Q);  // Origin on bone
+        const utils::Vector3d& pi_mus = insertionInGlobal(model, Q); // Insertion on bone
 
-        utils::Vector3d pi_wrap(0, 0,
-                                        0); // point on the wrapping related to insertion
-        utils::Vector3d po_wrap(0, 0,
-                                        0); // point on the wrapping related to origin
+        utils::Vector3d pi_wrap(0, 0, 0); // point on the wrapping related to insertion
+        utils::Vector3d po_wrap(0, 0, 0); // point on the wrapping related to origin
 
         utils::Scalar a; // Force the computation of the length
         w.wrapPoints(RT,po_mus,pi_mus,po_wrap, pi_wrap, &a);
@@ -365,13 +327,11 @@ void internal_forces::Geometry::setPointsInGlobal(
         // Store the points in local
         m_pointsInLocal->push_back(originInLocal());
         m_pointsInLocal->push_back(
-            utils::Vector3d(RigidBodyDynamics::CalcBodyToBaseCoordinates(
-                                        model, Q, model.GetBodyId(w.parent().c_str()),po_wrap, false),
-                                    "wrap_o", w.parent()));
+            utils::Vector3d(
+                model.CalcBodyToBaseCoordinates(Q, w.parent(), po_wrap, false), "wrap_o", w.parent()));
         m_pointsInLocal->push_back(
-            utils::Vector3d(RigidBodyDynamics::CalcBodyToBaseCoordinates(
-                                        model, Q, model.GetBodyId(w.parent().c_str()),pi_wrap, false),
-                                    "wrap_i", w.parent()));
+            utils::Vector3d(
+                model.CalcBodyToBaseCoordinates(Q, w.parent(), pi_wrap, false), "wrap_i", w.parent()));
         m_pointsInLocal->push_back(insertionInLocal());
 
         // Store the points in global
@@ -387,12 +347,9 @@ void internal_forces::Geometry::setPointsInGlobal(
         m_pointsInLocal->push_back(originInLocal());
         m_pointsInGlobal->push_back(originInGlobal(model, Q));
         for (size_t i=0; i<pathModifiers->nbObjects(); ++i) {
-            const internal_forces::ViaPoint& node(static_cast<internal_forces::ViaPoint&>
-                                                  (pathModifiers->object(i)));
+            const internal_forces::ViaPoint& node(static_cast<internal_forces::ViaPoint&>(pathModifiers->object(i)));
             m_pointsInLocal->push_back(node);
-            m_pointsInGlobal->push_back(RigidBodyDynamics::CalcBodyToBaseCoordinates(model,
-                                        Q,
-                                        model.GetBodyId(node.parent().c_str()), node, false));
+            m_pointsInGlobal->push_back(model.CalcBodyToBaseCoordinates(Q, node.parent(), node, false));
         }
         m_pointsInLocal->push_back(insertionInLocal());
         m_pointsInGlobal->push_back(insertionInGlobal(model,Q));
@@ -422,10 +379,8 @@ const utils::Scalar& internal_forces::Geometry::length(
         utils::Error::check(pathModifiers->nbWraps() < 2,
                                     "Cannot compute more than one wrapping yet");
 
-        utils::Vector3d pi_wrap(0, 0,
-                                        0); // point on the wrapping related to insertion
-        utils::Vector3d po_wrap(0, 0,
-                                        0); // point on the wrapping related to origin
+        utils::Vector3d pi_wrap(0, 0, 0); // point on the wrapping related to insertion
+        utils::Vector3d po_wrap(0, 0, 0); // point on the wrapping related to origin
         utils::Scalar lengthWrap(0);
         static_cast<internal_forces::WrappingObject&>(
             pathModifiers->object(0)).wrapPoints(po_wrap, pi_wrap, &lengthWrap);
@@ -450,17 +405,15 @@ const utils::Scalar& internal_forces::Geometry::velocity(
     return *m_velocity;
 }
 
-void internal_forces::Geometry::setJacobianDimension(rigidbody::Joints
-        &model)
+void internal_forces::Geometry::setJacobianDimension(
+    rigidbody::Joints& model)
 {
     *m_jacobian = utils::Matrix::Zero(static_cast<unsigned int>(m_pointsInLocal->size()*3), model.dof_count);
-    *m_G = utils::Matrix::Zero(3, model.dof_count);
 }
 
 void internal_forces::Geometry::jacobian(const utils::Matrix &jaco)
 {
-    utils::Error::check(jaco.rows()/3 == static_cast<int>
-                                (m_pointsInGlobal->size()), "Jacobian is the wrong size");
+    utils::Error::check(jaco.rows()/3 == static_cast<int>(m_pointsInGlobal->size()), "Jacobian is the wrong size");
     *m_jacobian = jaco;
 }
 
@@ -468,12 +421,11 @@ void internal_forces::Geometry::jacobian(
     rigidbody::Joints &model,
     const rigidbody::GeneralizedCoordinates &Q)
 {
+    // jacobian is a protected method, so all method that calls it is expected to have updated the kinematics if required
+    bool updateKin = false;
     for (size_t i=0; i<m_pointsInLocal->size(); ++i) {
-        m_G->setZero();
-        RigidBodyDynamics::CalcPointJacobian(model, Q,
-                                             model.GetBodyId((*m_pointsInLocal)[i].parent().c_str()),
-                                             (*m_pointsInLocal)[i], *m_G, false); // False for speed
-        m_jacobian->block(3* static_cast<unsigned int>(i),0,3,model.dof_count) = *m_G;
+        m_jacobian->block(3* static_cast<unsigned int>(i),0,3,model.dof_count) =
+            model.CalcPointJacobian(Q, (*m_pointsInLocal)[i].parent(), (*m_pointsInLocal)[i], updateKin);
     }
 }
 

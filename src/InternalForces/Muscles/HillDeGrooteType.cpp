@@ -90,22 +90,15 @@ void internal_forces::muscles::HillDeGrooteType::computeFlPE()
     utils::Scalar kpe = 4;
     utils::Scalar e0 = 0.6;
     utils::Scalar normLength = position().length() / characteristics().optimalLength();
+    utils::Scalar t5 = exp( kpe * (normLength - 1) / e0);
+    utils::Scalar t7 = exp(kpe);
 
 #ifdef BIORBD_USE_CASADI_MATH
     *m_FlPE = IF_ELSE_NAMESPACE::if_else_zero(
-                  IF_ELSE_NAMESPACE::gt(normLength, 1),
-                (exp( (kpe * (normLength-1)) / e0) -1)
-                                      /
-                                  (exp( kpe ) - 1));
+        IF_ELSE_NAMESPACE::gt(normLength, 1), (t5 - 1) / (t7 - 1)
+    );
 #else
-
-    if (normLength > 1) {
-        *m_FlPE = (exp( (kpe * (normLength-1)) / e0) -1)
-                      /
-                  (exp( kpe ) - 1);
-    } else {
-        *m_FlPE = 0;
-    }
+    *m_FlPE = normLength > 1 ? (t5 - 1) / (t7 - 1) : 0;
 #endif
 }
 
@@ -116,7 +109,7 @@ void internal_forces::muscles::HillDeGrooteType::computeFvCE()
     utils::Scalar d2 = -8.149;
     utils::Scalar d3 = -0.374;
     utils::Scalar d4 = 0.886;
-    utils::Scalar norm_v = m_position->velocity() / *m_cste_maxShorteningSpeed;
+    utils::Scalar norm_v = m_position->velocity() / this->characteristics().maxShorteningSpeed();
 
     *m_FvCE = d1 * std::log(
             (d2 * norm_v + d3) + std::sqrt(( d2 * norm_v + d3)*( d2 * norm_v + d3) + 1)

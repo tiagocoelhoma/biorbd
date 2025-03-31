@@ -128,19 +128,20 @@ void Reader::readModelFile(
                 bool isInertiaSet(false);
                 double mass = 0.00000001;
                 utils::Matrix3d inertia(utils::Matrix3d::Zero());
-                utils::RotoTrans RT(RigidBodyDynamics::Math::Matrix4d::Identity());
+                utils::RotoTrans RT = utils::RotoTrans();
                 utils::Vector3d com(0,0,0);
                 rigidbody::Mesh mesh;
                 bool isMeshSet(false);
                 int segmentByFile(-1); // -1 non setté, 0 pas par file, 1 par file
                 std::vector<utils::Range> QRanges;
-                std::vector<utils::Range> QDotRanges;
-                std::vector<utils::Range> QDDotRanges;
+                std::vector<utils::Range> QdotRanges;
+                std::vector<utils::Range> QddotRanges;
+                std::vector<utils::Scalar> jointDampings;
                 bool isRangeQSet(
                     false); // Ranges must be done only after translation AND rotations tags
-                bool isRangeQDotSet(
+                bool isRangeQdotSet(
                     false); // Ranges must be done only after translation AND rotations tags
-                bool isRangeQDDotSet(
+                bool isRangeQddotSet(
                     false); // Ranges must be done only after translation AND rotations tags
                 while(file.read(property_tag) && property_tag.tolower().compare("endsegment")) {
                     if (!property_tag.tolower().compare("parent")) {
@@ -151,25 +152,19 @@ void Reader::readModelFile(
                         }
                     } else if (!property_tag.tolower().compare("translations")) {
                         utils::Error::check(!isRangeQSet, "Translations must appear before the rangesq tag");
-                        utils::Error::check(!isRangeQDotSet, "Translations must appear before the rangesqdot tag");
-                        utils::Error::check(!isRangeQDDotSet,"Translations must appear before the rangesqddot tag");
+                        utils::Error::check(!isRangeQdotSet, "Translations must appear before the rangesqdot tag");
+                        utils::Error::check(!isRangeQddotSet,"Translations must appear before the rangesqddot tag");
                         file.read(trans);
                     } else if (!property_tag.tolower().compare("rotations")) {
                         utils::Error::check(!isRangeQSet, "Rotations must appear before the rangesq tag");
-                        utils::Error::check(!isRangeQDotSet, "Rotations must appear before the rangesqdot tag");
-                        utils::Error::check(!isRangeQDDotSet, "Rotations must appear before the rangesqddot tag");
+                        utils::Error::check(!isRangeQdotSet, "Rotations must appear before the rangesqdot tag");
+                        utils::Error::check(!isRangeQddotSet, "Rotations must appear before the rangesqddot tag");
                         file.read(rot);
                     } else if (
                         !property_tag.tolower().compare("ranges") || 
                         !property_tag.tolower().compare("rangesq")){
                         double min, max;
-                        size_t rotLength(0);
-                        if (rot.compare("q")) {
-                            // If not a quaternion
-                            rotLength = rot.length();
-                        } else {
-                            rotLength = 4;
-                        }
+                        size_t rotLength = !rot.compare("q") ? 4 : rot.length();
                         for (size_t i=0; i<trans.length() + rotLength; ++i) {
                             file.read(min);
                             file.read(max);
@@ -179,36 +174,29 @@ void Reader::readModelFile(
                         isRangeQSet = true;
                     } else if (!property_tag.tolower().compare("rangesqdot")) {
                         double min, max;
-                        size_t rotLength(0);
-                        if (rot.compare("q")) {
-                            // If not a quaternion
-                            rotLength = rot.length();
-                        } else {
-                            rotLength = 3;
-                        }
+                        size_t rotLength = !rot.compare("q") ? 3 : rot.length();
                         for (size_t i=0; i<trans.length() + rotLength; ++i) {
                             file.read(min);
                             file.read(max);
-                            QDotRanges.push_back(
-                                utils::Range (min, max));
+                            QdotRanges.push_back(utils::Range (min, max));
                         }
-                        isRangeQDotSet = true;
+                        isRangeQdotSet = true;
                     } else if (!property_tag.tolower().compare("rangesqddot")) {
                         double min, max;
-                        size_t rotLength(0);
-                        if (rot.compare("q")) {
-                            // If not a quaternion
-                            rotLength = rot.length();
-                        } else {
-                            rotLength = 3;
-                        }
+                        size_t rotLength = !rot.compare("q") ? 3 : rot.length();
                         for (size_t i=0; i<trans.length() + rotLength; ++i) {
                             file.read(min);
                             file.read(max);
-                            QDDotRanges.push_back(
-                                utils::Range (min, max));
+                            QddotRanges.push_back(utils::Range (min, max));
                         }
-                        isRangeQDDotSet = true;
+                        isRangeQddotSet = true;
+                    } else if (!property_tag.tolower().compare("jointdampings")) {
+                        size_t rotLength = !rot.compare("q") ? 3 : rot.length();
+                        for (size_t i=0; i<trans.length() + rotLength; ++i) {
+                            double damping;
+                            file.read(damping);
+                            jointDampings.push_back(damping);
+                        }
                     } else if (!property_tag.tolower().compare("mass")) {
                         file.read(mass, variable);
                     } else if (!property_tag.tolower().compare("inertia") || !property_tag.tolower().compare("inertiamatrix")) {
@@ -288,7 +276,7 @@ void Reader::readModelFile(
                         isMeshSet = true;
                     } else if (!property_tag.tolower().compare("meshrt")) {
                         utils::Error::check(isMeshSet, "mesh(es) or meshfile should be declared before meshrt");
-                        utils::RotoTrans meshRT(RigidBodyDynamics::Math::Matrix4d::Identity());
+                        utils::RotoTrans meshRT = utils::RotoTrans();
                         readRtMatrix(file, variable, false, meshRT);
                         mesh.rotate(meshRT);
                     } else if (!property_tag.tolower().compare("meshscale")) {
@@ -320,7 +308,7 @@ void Reader::readModelFile(
                         }
                     }
                 }
-                if (!isRangeQDotSet) {
+                if (!isRangeQdotSet) {
                     size_t rotLength(0);
                     if (rot.compare("q")) {
                         // If not a quaternion
@@ -329,11 +317,10 @@ void Reader::readModelFile(
                         rotLength = 3;
                     }
                     for (size_t i=0; i<trans.length() + rotLength; ++i) {
-                        QDotRanges.push_back(
-                            utils::Range (-M_PI*10, M_PI*10));
+                        QdotRanges.push_back(utils::Range (-M_PI*10, M_PI*10));
                     }
                 }
-                if (!isRangeQDDotSet) {
+                if (!isRangeQddotSet) {
                     size_t rotLength(0);
                     if (rot.compare("q")) {
                         // If not a quaternion
@@ -342,8 +329,7 @@ void Reader::readModelFile(
                         rotLength = 3;
                     }
                     for (size_t i=0; i<trans.length() + rotLength; ++i) {
-                        QDDotRanges.push_back(
-                            utils::Range (-M_PI*100, M_PI*100));
+                        QddotRanges.push_back(utils::Range (-M_PI*100, M_PI*100));
                     }
                 }
                 rigidbody::SegmentCharacteristics characteristics(mass, com, inertia, mesh);
@@ -353,8 +339,9 @@ void Reader::readModelFile(
                     trans, 
                     rot, 
                     QRanges, 
-                    QDotRanges,
-                    QDDotRanges, 
+                    QdotRanges,
+                    QddotRanges, 
+                    jointDampings,
                     characteristics, 
                     RT
                 );
@@ -381,7 +368,7 @@ void Reader::readModelFile(
                 utils::Vector3d pos(0,0,0);
                 bool technical = true;
                 bool anatomical = false;
-                utils::String axesToRemove;
+                utils::String axesToRemove = "";
                 while(file.read(property_tag) && property_tag.tolower().compare("endmarker"))
                     if (!property_tag.tolower().compare("parent")) {
                         // Dynamically find the parent number
@@ -399,8 +386,7 @@ void Reader::readModelFile(
                         file.read(axesToRemove);
                     }
 
-                model->addMarker(pos, name, parent_str, technical, anatomical, axesToRemove,
-                                 static_cast<int>(parent_int));
+                model->addMarker(pos, name, parent_str, technical, anatomical, axesToRemove, static_cast<int>(parent_int));
             } else if (!main_tag.tolower().compare("mimu") && version >= 4) {
                 utils::Error::raise("MIMU is no more the right tag, change it to IMU!");
             } else if (!main_tag.tolower().compare("imu")
@@ -478,8 +464,7 @@ void Reader::readModelFile(
                     }
                 }
                 if (fromMarkers) {
-                    std::vector<rigidbody::NodeSegment> allMarkerOnSegment(model->marker(
-                                parent_str));
+                    std::vector<rigidbody::NodeSegment> allMarkerOnSegment(model->markers(parent_str));
                     rigidbody::NodeSegment origin, axis1Beg, axis1End, axis2Beg, axis2End;
                     bool isOrigin(false), isAxis1Beg(false), isAxis1End(false), isAxis2Beg(false),
                          isAxis2End(false);
@@ -556,10 +541,6 @@ void Reader::readModelFile(
                     }
                 }
                 if (version == 1) {
-#ifndef BIORBD_USE_CASADI_MATH
-                    utils::Error::check(norm.norm() == 1.0,
-                                                "Normal of the contact must be provided" );
-#endif
                     model->AddConstraint(parent_int, pos, norm, name, parentName);
                 } else if (version >= 2) {
                     utils::Error::check(axis.compare(""), "Axis must be provided");
@@ -901,6 +882,7 @@ void Reader::readModelFile(
                 double maxActivation(1);
                 double PCSA(0);
                 double shapeFactor(0);
+                double maxShorteningSpeed(10);
                 internal_forces::muscles::FatigueParameters fatigueParameters;
                 double mAscale(0);          // FES Ding
                 double mDingTau1Param(0);
@@ -971,6 +953,8 @@ void Reader::readModelFile(
                         file.read(maxExcitation, variable);
                     } else if (!property_tag.tolower().compare("pcsa")) {
                         file.read(PCSA, variable);
+                    } else if (!property_tag.tolower().compare("maxshorteningspeed")) {
+                        file.read(maxShorteningSpeed, variable);
                     } else if (!property_tag.tolower().compare("fatigueparameters")) {
                         while(file.read(subproperty_tag)
                                 && subproperty_tag.tolower().compare("endfatigueparameters")) {
@@ -1020,7 +1004,7 @@ void Reader::readModelFile(
                 internal_forces::muscles::State stateMax(maxExcitation, maxActivation);
                 internal_forces::muscles::Characteristics characteristics(optimalLength, maxForce, PCSA,
                         tendonSlackLength, pennAngle, stateMax,
-                        fatigueParameters, useDamping, 0.01, 0.04, 0.01, mAscale, mDingTau1Param,  mDingTau2Param, mDingKmParam);
+                        fatigueParameters, useDamping, 0.01, 0.04, 0.01, mAscale, mDingTau1Param,  mDingTau2Param, mDingKmParam, maxShorteningSpeed);
                 model->muscleGroup(static_cast<size_t>(idxGroup)).addMuscle(name,type,geo,
                         characteristics,
                         internal_forces::PathModifiers(),stateType,dynamicFatigueType);
@@ -2287,6 +2271,7 @@ rigidbody::Mesh Reader::readMeshFileStl(
     }
 
     rigidbody::Mesh mesh;
+    mesh.setPath(path);
     if (isBinary){
         // Know the number of points
         char headerChar[80] = "";
@@ -2296,7 +2281,6 @@ rigidbody::Mesh Reader::readMeshFileStl(
         file.readFromBinary(nbTrianglesChar, 4);
         size_t nbTriangles = static_cast<size_t>(*((unsigned int*) nbTrianglesChar));
 
-        mesh.setPath(path);
         utils::Vector3d normal;
         utils::Vector3d vertex;
         for (int i = 0; i<nbTriangles; ++i){

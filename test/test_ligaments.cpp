@@ -45,10 +45,12 @@ TEST(constant, unitTest)
         internal_forces::ligaments::LigamentConstant ligamentConstant(
             model.ligament(ligamentConstantType));
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        ligamentConstant.updateOrientations(model, Q, qDot);
+        Qdot = Qdot.setOnes() / 10;
+        auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+
+        ligamentConstant.updateOrientations(updatedModel, Q, Qdot);
         SCALAR_TO_DOUBLE(fl, ligamentConstant.Fl());
         SCALAR_TO_DOUBLE(damping, ligamentConstant.damping());
         EXPECT_NEAR(fl, 500, requiredPrecision);
@@ -100,10 +102,12 @@ TEST(constant, unitTest)
              model.ligament(ligamentConstantType));
 
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        SCALAR_TO_DOUBLE(force, originalLigament.force(model, Q, qDot, 2));
+        Qdot = Qdot.setOnes() / 10;
+        auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+
+        SCALAR_TO_DOUBLE(force, originalLigament.force(updatedModel, Q, Qdot, true));
         EXPECT_NEAR(force, 500.00056194583868, requiredPrecision);
     }
 }
@@ -139,10 +143,13 @@ TEST(constant, copy)
         internal_forces::ligaments::LigamentConstant ligamentConstant(
              model.ligament(ligamentConstantType));
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        ligamentConstant.updateOrientations(model, Q);
+        Qdot = Qdot.setOnes() / 10;
+
+        auto updatedModel = model.UpdateKinematicsCustom(&Q);
+        ligamentConstant.updateOrientations(updatedModel, Q, Qdot);
+        
         internal_forces::ligaments::LigamentConstant shallowCopy(ligamentConstant);
         internal_forces::ligaments::LigamentConstant deepCopyNow(ligamentConstant.DeepCopy());
         internal_forces::ligaments::LigamentConstant deepCopyLater;
@@ -167,7 +174,8 @@ TEST(constant, copy)
         utils::String oldName(insertion.utils::Node::name());
         utils::String newName("MyNewName");
         insertion.setName(newName);
-        ligamentConstant.updateOrientations(model, Q, qDot, 2);
+
+        ligamentConstant.updateOrientations(updatedModel, Q, Qdot);        
         {
             SCALAR_TO_DOUBLE(length, ligamentConstant.position().length());
             SCALAR_TO_DOUBLE(shallowCopyLength, shallowCopy.position().length());
@@ -205,10 +213,11 @@ TEST(springLinear, unitTest)
         internal_forces::ligaments::LigamentSpringLinear ligamentSpringLinear(
             model.ligament(ligamentSpringLinearType));
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        ligamentSpringLinear.updateOrientations(model, Q, qDot);
+        Qdot = Qdot.setOnes() / 10;
+        auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+        ligamentSpringLinear.updateOrientations(updatedModel, Q, Qdot);
 
         SCALAR_TO_DOUBLE(fl, ligamentSpringLinear.Fl());
         SCALAR_TO_DOUBLE(damping, ligamentSpringLinear.damping());
@@ -261,10 +270,12 @@ TEST(springLinear, unitTest)
              model.ligament(ligamentSpringLinearType));
 
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        SCALAR_TO_DOUBLE(force, originalLigament.force(model, Q, qDot, 2));
+        Qdot = Qdot.setOnes() / 10;
+        auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+
+        SCALAR_TO_DOUBLE(force, originalLigament.force(updatedModel, Q, Qdot, true));
         EXPECT_NEAR(force, 27.517183773325474, requiredPrecision);
     }
 }
@@ -277,7 +288,7 @@ TEST(springLinear, copy)
              model.ligament(ligamentSpringLinearType));
         rigidbody::GeneralizedCoordinates Q(model);
         Q = Q.setOnes() / 10;
-
+        
         internal_forces::ligaments::LigamentSpringLinear shallowCopy(ligamentSpringLinear);
         internal_forces::ligaments::LigamentSpringLinear deepCopyNow(ligamentSpringLinear.DeepCopy());
         internal_forces::ligaments::LigamentSpringLinear deepCopyLater;
@@ -287,6 +298,17 @@ TEST(springLinear, copy)
         EXPECT_STREQ(shallowCopy.name().c_str(), originalName.c_str());
         EXPECT_STREQ(deepCopyNow.name().c_str(), originalName.c_str());
         EXPECT_STREQ(deepCopyLater.name().c_str(), originalName.c_str());
+        
+        {
+            SCALAR_TO_DOUBLE(ligamentSpringLinearStiffness, ligamentSpringLinear.stiffness());
+            SCALAR_TO_DOUBLE(shallowCopyStiffness, shallowCopy.stiffness());
+            SCALAR_TO_DOUBLE(deepCopyNowStiffness, deepCopyNow.stiffness());
+            SCALAR_TO_DOUBLE(deepCopyLaterStiffness, deepCopyLater.stiffness());
+            EXPECT_FLOAT_EQ(ligamentSpringLinearStiffness, 500);
+            EXPECT_FLOAT_EQ(shallowCopyStiffness, 500);
+            EXPECT_FLOAT_EQ(deepCopyNowStiffness, 500);
+            EXPECT_FLOAT_EQ(deepCopyLaterStiffness, 500);
+        }
 
         utils::String newName("MyNewMuscleName");
         ligamentSpringLinear.setName(newName);
@@ -294,16 +316,30 @@ TEST(springLinear, copy)
         EXPECT_STREQ(shallowCopy.name().c_str(), newName.c_str());
         EXPECT_STREQ(deepCopyNow.name().c_str(), originalName.c_str());
         EXPECT_STREQ(deepCopyLater.name().c_str(), originalName.c_str());
+        
+        ligamentSpringLinear.setStiffness(100);
+        {
+            SCALAR_TO_DOUBLE(ligamentSpringLinearStiffness, ligamentSpringLinear.stiffness());
+            SCALAR_TO_DOUBLE(shallowCopyStiffness, shallowCopy.stiffness());
+            SCALAR_TO_DOUBLE(deepCopyNowStiffness, deepCopyNow.stiffness());
+            SCALAR_TO_DOUBLE(deepCopyLaterStiffness, deepCopyLater.stiffness());
+            EXPECT_FLOAT_EQ(ligamentSpringLinearStiffness, 100);
+            EXPECT_FLOAT_EQ(shallowCopyStiffness, 100);
+            EXPECT_FLOAT_EQ(deepCopyNowStiffness, 500);
+            EXPECT_FLOAT_EQ(deepCopyLaterStiffness, 500);
+        }
     }
     {
         Model model(modelPathForGenericTest);
         internal_forces::ligaments::LigamentSpringLinear ligamentSpringLinear(
              model.ligament(ligamentSpringLinearType));
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        ligamentSpringLinear.updateOrientations(model, Q);
+        Qdot = Qdot.setOnes() / 10;
+
+        auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+        ligamentSpringLinear.updateOrientations(updatedModel, Q);
 
         internal_forces::ligaments::LigamentSpringLinear shallowCopy(ligamentSpringLinear);
         internal_forces::ligaments::LigamentSpringLinear deepCopyNow(ligamentSpringLinear.DeepCopy());
@@ -324,13 +360,11 @@ TEST(springLinear, copy)
         // Change the position of the insertion and pennation angle and compare again (length and insertion in Local)
         utils::Vector3d insertion(ligamentSpringLinear.position().insertionInLocal());
         insertion.set(0.5, 0.6, 0.7);
-        const_cast<internal_forces::Geometry&>
-        (ligamentSpringLinear.position()).setInsertionInLocal(insertion);
+        const_cast<internal_forces::Geometry&>(ligamentSpringLinear.position()).setInsertionInLocal(insertion);
         utils::String oldName(insertion.utils::Node::name());
         utils::String newName("MyNewName");
         insertion.setName(newName);
-        ligamentSpringLinear.updateOrientations(model, Q, qDot, 2);
-
+        ligamentSpringLinear.updateOrientations(updatedModel, Q, Qdot);
 
         {
             SCALAR_TO_DOUBLE(length, ligamentSpringLinear.position().length());
@@ -341,15 +375,10 @@ TEST(springLinear, copy)
             EXPECT_NEAR(shallowCopyLength, 0.97513625610637888, requiredPrecision);
             EXPECT_NEAR(deepCopyNowLength, 0.14083430313088782, requiredPrecision);
             EXPECT_NEAR(deepCopyLaterLength, 0.14083430313088782, requiredPrecision);
-            EXPECT_EQ(ligamentSpringLinear.position().insertionInLocal().utils::Node::name(),
-                      newName);
-            EXPECT_EQ(shallowCopy.position().insertionInLocal().utils::Node::name(),
-                      newName);
-            EXPECT_EQ(deepCopyNow.position().insertionInLocal().utils::Node::name(),
-                      oldName);
-            EXPECT_EQ(
-                deepCopyLater.position().insertionInLocal().utils::Node::name(),
-                oldName);
+            EXPECT_EQ(ligamentSpringLinear.position().insertionInLocal().utils::Node::name(), newName);
+            EXPECT_EQ(shallowCopy.position().insertionInLocal().utils::Node::name(), newName);
+            EXPECT_EQ(deepCopyNow.position().insertionInLocal().utils::Node::name(), oldName);
+            EXPECT_EQ(deepCopyLater.position().insertionInLocal().utils::Node::name(), oldName);
         }
     }
 }
@@ -369,10 +398,12 @@ TEST(springSecondOrder, unitTest)
         internal_forces::ligaments::LigamentSpringSecondOrder ligamentSpringSecondOrder(
             model.ligament(ligamentSpringSecondOrderType));
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        ligamentSpringSecondOrder.updateOrientations(model, Q, qDot);
+        Qdot = Qdot.setOnes() / 10;
+
+        auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+        ligamentSpringSecondOrder.updateOrientations(updatedModel, Q, Qdot);
 
         SCALAR_TO_DOUBLE(fl, ligamentSpringSecondOrder.Fl());
         SCALAR_TO_DOUBLE(damping, ligamentSpringSecondOrder.damping());
@@ -427,10 +458,11 @@ TEST(springSecondOrder, unitTest)
              model.ligament(ligamentSpringSecondOrderType));
 
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        SCALAR_TO_DOUBLE(force, originalLigament.force(model, Q, qDot, 2));
+        Qdot = Qdot.setOnes() / 10;
+        auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+        SCALAR_TO_DOUBLE(force, originalLigament.force(updatedModel, Q, Qdot, true));
         EXPECT_NEAR(force, 139.51352848156762, requiredPrecision);
     }
 }
@@ -466,10 +498,12 @@ TEST(springSecondOrder, copy)
         internal_forces::ligaments::LigamentSpringSecondOrder ligamentSpringSecondOrder(
              model.ligament(ligamentSpringSecondOrderType));
         rigidbody::GeneralizedCoordinates Q(model);
-        rigidbody::GeneralizedVelocity qDot(model);
+        rigidbody::GeneralizedVelocity Qdot(model);
         Q = Q.setOnes() / 10;
-        qDot = qDot.setOnes() / 10;
-        ligamentSpringSecondOrder.updateOrientations(model, Q);
+        Qdot = Qdot.setOnes() / 10;
+
+        auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+        ligamentSpringSecondOrder.updateOrientations(updatedModel, Q);
 
         internal_forces::ligaments::LigamentSpringSecondOrder shallowCopy(ligamentSpringSecondOrder);
         internal_forces::ligaments::LigamentSpringSecondOrder deepCopyNow(ligamentSpringSecondOrder.DeepCopy());
@@ -495,7 +529,7 @@ TEST(springSecondOrder, copy)
         utils::String oldName(insertion.utils::Node::name());
         utils::String newName("MyNewName");
         insertion.setName(newName);
-        ligamentSpringSecondOrder.updateOrientations(model, Q, qDot, 2);
+        ligamentSpringSecondOrder.updateOrientations(updatedModel, Q, Qdot);
 
 
         {
@@ -538,47 +572,65 @@ TEST(Ligaments, AddLigaments)
     }
 }
 
-TEST(ligamentForce, force)
+TEST(LigamentForce, force)
 {
     Model model(modelPathForGenericTest);
     rigidbody::GeneralizedCoordinates Q(model);
-    rigidbody::GeneralizedVelocity QDot(model);
+    rigidbody::GeneralizedVelocity Qdot(model);
     Q = Q.setOnes()/10;
-    QDot = QDot.setOnes()/10;
-    model.updateLigaments(Q, QDot, true);
+    Qdot = Qdot.setOnes()/10;
+    
+    auto updatedModel = model.UpdateKinematicsCustom(&Q, &Qdot);
+    const utils::Vector& F = model.ligamentForces(updatedModel, Q, Qdot);
 
-    const utils::Vector& F = model.ligamentForces(Q, QDot);
-
-    std::vector<double> ExpectedForce({
-        500.00056194583868, 27.517183773325474, 139.51352848156762
-    });
+    std::vector<double> ExpectedForce({500.00056194583868, 27.517183773325474, 139.51352848156762});
     for (unsigned int i=0; i<model.nbLigaments(); ++i) {
         SCALAR_TO_DOUBLE(val, F(i));
         EXPECT_NEAR(val, ExpectedForce[i], requiredPrecision);
     }
 }
 
+#ifndef BIORBD_USE_CASADI_MATH
+TEST(LigamentForce, forceUpdateOutside)
+{
+    Model model(modelPathForGenericTest);
+    rigidbody::GeneralizedCoordinates Q(model);
+    rigidbody::GeneralizedVelocity Qdot(model);
+    Q = Q.setOnes()/10;
+    Qdot = Qdot.setOnes()/10;
+    model.updateLigaments(Q, Qdot, true);
+
+    const utils::Vector& F = model.ligamentForces(Q, Qdot, false);
+
+    std::vector<double> ExpectedForce({500.00056194583868, 27.517183773325474, 139.51352848156762});
+    for (unsigned int i=0; i<model.nbLigaments(); ++i) {
+        SCALAR_TO_DOUBLE(val, F(i));
+        EXPECT_NEAR(val, ExpectedForce[i], requiredPrecision);
+    }
+}
+#endif
+
 TEST(LigamentTorque, torqueFromLigaments)
 {
     Model model(modelPathForGenericTest);
     rigidbody::GeneralizedCoordinates Q(model);
-    rigidbody::GeneralizedVelocity QDot(model);
-    rigidbody::GeneralizedAcceleration QDDot(model);
+    rigidbody::GeneralizedVelocity Qdot(model);
+    rigidbody::GeneralizedAcceleration Qddot(model);
     Q.setOnes()/10;
-    QDot.setOnes()/10;
+    Qdot.setOnes()/10;
     rigidbody::GeneralizedTorque Tau(model);
     std::vector<double> TauExpected({8.4576580134417226e-15, 3.0375576471800541});
-    Tau = model.ligamentsJointTorque(Q, QDot);
-    for (unsigned int i=0; i<QDDot.size(); ++i) {
+    Tau = model.ligamentsJointTorque(Q, Qdot);
+    for (unsigned int i=0; i<Qddot.size(); ++i) {
         SCALAR_TO_DOUBLE(val, Tau(i));
         EXPECT_NEAR(val, TauExpected[i], requiredPrecision);
     }
 
-    RigidBodyDynamics::ForwardDynamics(model, Q, QDot, Tau, QDDot);
-    std::vector<double> QDDotExpected({-29.605664255664376, 94.507026107190669});
-    for (unsigned int i=0; i<QDDot.size(); ++i) {
-        SCALAR_TO_DOUBLE(val, QDDot(i));
-        EXPECT_NEAR(val, QDDotExpected[i], requiredPrecision);
+    RigidBodyDynamics::ForwardDynamics(model, Q, Qdot, Tau, Qddot);
+    std::vector<double> QddotExpected({-29.605664255664376, 94.507026107190669});
+    for (unsigned int i=0; i<Qddot.size(); ++i) {
+        SCALAR_TO_DOUBLE(val, Qddot(i));
+        EXPECT_NEAR(val, QddotExpected[i], requiredPrecision);
     }
 }
 

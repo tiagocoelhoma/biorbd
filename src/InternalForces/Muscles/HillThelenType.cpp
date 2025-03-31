@@ -95,15 +95,10 @@ void internal_forces::muscles::HillThelenType::computeFlPE()
 
 #ifdef BIORBD_USE_CASADI_MATH
     *m_FlPE = IF_ELSE_NAMESPACE::if_else_zero(
-                  IF_ELSE_NAMESPACE::gt(normLength, 1),
-                  ((t5 - 1) / (t7 - 1))
-                );
+        IF_ELSE_NAMESPACE::gt(normLength, 1), ((t5 - 1) / (t7 - 1))
+    );
 #else
-    if (normLength > 1)
-        *m_FlPE = (t5 - 1) / (t7 - 1);
-    else
-        *m_FlPE = 0;
-
+    *m_FlPE = normLength > 1 ? (t5 - 1) / (t7 - 1) : 0;
 #endif
 }
 
@@ -117,19 +112,32 @@ void internal_forces::muscles::HillThelenType::computeFlCE(
 void internal_forces::muscles::HillThelenType::computeFvCE()
 {
 	utils::Scalar v = m_position->velocity();
-    utils::Scalar norm_v = v / (characteristics().optimalLength() * *m_cste_maxShorteningSpeed);
+    utils::Scalar norm_v = v / (characteristics().optimalLength() * this->characteristics().maxShorteningSpeed());
     utils::Scalar kvce = 0.06;
     utils::Scalar flen = 1.6;
 
+    // WARNING CONCENTRIC IS NOT FROM THELEN (see header file for precisions)
+    utils::Scalar a = 3.0 / 11.0;
+    utils::Scalar b = 3.0 / 11.0;
+
+    
 #ifdef BIORBD_USE_CASADI_MATH
-    *m_FvCE = IF_ELSE_NAMESPACE::if_else(
-                  IF_ELSE_NAMESPACE::gt(norm_v, 0),
-                  ((1 + norm_v * flen / kvce) / (1 + norm_v / kvce)),
-                  0);
+    *m_FvCE = 
+        IF_ELSE_NAMESPACE::if_else(IF_ELSE_NAMESPACE::ge(norm_v, 0), 
+            ((1 + norm_v * flen / kvce) / (1 + norm_v / kvce)), // If norm_v >= 0
+            IF_ELSE_NAMESPACE::if_else(IF_ELSE_NAMESPACE::ge(norm_v, -1), 
+                (1 + a) * b / (-norm_v + b) - a, // if norm_v >= -1
+                0 // if norm_v < -1
+            )
+        );
 #else
-    if (norm_v > 0){
+    
+    if (norm_v >= 0){
         *m_FvCE = (1 + norm_v * flen / kvce) / (1 + norm_v / kvce);
-    } else {
+    } else if (norm_v >= -1) {
+        *m_FvCE = (1 + a) * b / (-norm_v + b) - a;
+    }
+    else {
         *m_FvCE = 0;
     }
 #endif
