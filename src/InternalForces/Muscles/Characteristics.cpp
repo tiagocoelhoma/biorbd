@@ -80,6 +80,7 @@ internal_forces::muscles::Characteristics::Characteristics(
     m_fatigueParameters(std::make_shared<internal_forces::muscles::FatigueParameters>
                         (fatigueParameters)),
     m_useDamping(std::make_shared<bool>(useDamping)),
+    m_maxShorteningSpeed(std::make_shared<utils::Scalar>(maxShorteningSpeed)),
     m_ascale(std::make_shared<utils::Scalar>(mAscale)),  //fes
     m_dingTau1(std::make_shared<utils::Scalar>(mDingTau1Param)),
     m_dingTau2(std::make_shared<utils::Scalar>(mDingTau2Param)),
@@ -115,11 +116,11 @@ void internal_forces::muscles::Characteristics::DeepCopy(
     *m_torqueDeactivation = *other.m_torqueDeactivation;
     *m_fatigueParameters = other.m_fatigueParameters->DeepCopy();
     *m_useDamping = *other.m_useDamping;
+    *m_maxShorteningSpeed = *other.m_maxShorteningSpeed;
     *m_ascale = *other.m_ascale;
     *m_dingTau1 = *other.m_dingTau1;
     *m_dingTau2 = *other.m_dingTau2;
-    *m_dingKm = *other.m_dingKm;    *m_maxShorteningSpeed = *other.m_maxShorteningSpeed;
-
+    *m_dingKm = *other.m_dingKm;    
 }
 
 // Get et Set

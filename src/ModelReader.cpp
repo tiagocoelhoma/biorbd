@@ -1004,7 +1004,7 @@ void Reader::readModelFile(
                 internal_forces::muscles::State stateMax(maxExcitation, maxActivation);
                 internal_forces::muscles::Characteristics characteristics(optimalLength, maxForce, PCSA,
                         tendonSlackLength, pennAngle, stateMax,
-                        fatigueParameters, useDamping, 0.01, 0.04, 0.01, mAscale, mDingTau1Param,  mDingTau2Param, mDingKmParam, maxShorteningSpeed);
+                        fatigueParameters, useDamping, maxShorteningSpeed, 0.01, 0.04, 0.01, mAscale, mDingTau1Param,  mDingTau2Param, mDingKmParam);
                 model->muscleGroup(static_cast<size_t>(idxGroup)).addMuscle(name,type,geo,
                         characteristics,
                         internal_forces::PathModifiers(),stateType,dynamicFatigueType);

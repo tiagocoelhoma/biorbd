@@ -45,11 +45,11 @@ public:
     /// \param torqueDeact Time deactivation constant (default: 0.04)
     /// \param minAct Minimal activation (default: 0.01)
     /// \param useDamping Use damping (default: false)
+    /// \param maxShorteningSpeed Maximal velocity of shortening (default: 10.0)
     /// \param mAscale The ding model a scale parameter
     /// \param dingTau1 The ding model a scale parameter
     /// \param dingTau2 The ding model a scale parameter
     /// \param dingKmParam The ding model Km parameter
-    /// \param maxShorteningSpeed Maximal velocity of shortening (default: 10.0)
     ///
     Characteristics(
         const utils::Scalar& optLength,
@@ -63,12 +63,11 @@ public:
         const utils::Scalar& maxShorteningSpeed = 10.0,
         const utils::Scalar& torqueAct = 0.01,
         const utils::Scalar& torqueDeact = 0.04,
-        const utils::Scalar& minAct = 0.01
-    ,
-        const utils::Scalar& mAscale = 10,
-        const utils::Scalar& mDingTau1Param = 0.001,
-        const utils::Scalar& mDingTau2Param = 0.001,
-        const utils::Scalar& mDingKmParam = 0.001);
+        const utils::Scalar& minAct = 0.01,
+        const utils::Scalar& mAscale = 1000,
+        const utils::Scalar& mDingTau1Param = 0.01,
+        const utils::Scalar& mDingTau2Param = 0.02,
+        const utils::Scalar& mDingKmParam = 0.2);
 
     ///
     /// \brief Destroy the class properly
